@@ -1,3 +1,5 @@
+
+[JeevanSetu_PRD (1).docx](https://github.com/user-attachments/files/32099963/JeevanSetu_PRD.1.docx)
 # 🌿 JeevanSetu — AI-Powered Rural Health Companion
 
 <div align="center">
@@ -35,8 +37,7 @@ It uses the **NVIDIA NIM AI platform** (Llama 3.2 Vision Instruct) to perform in
 | Layer | Technology |
 |-------|------------|
 | Frontend | TypeScript + Vite |
-| AI Engine | NVIDIA NIM (meta/llama-3.2-11b-vision-instruct) |
-| Styling | Vanilla CSS with design tokens |
+| Styling |   Tailwind CSS with design tokens |
 | Routing | Hash-based SPA routing |
 | i18n | Custom lightweight i18n |
 
