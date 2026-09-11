@@ -1,0 +1,98 @@
+/* Tablet & Below (<= 1024px) */
+@media (max-width: 1024px) {
+  .footer__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+  }
+
+  .grid--4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid--3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile Devices (<= 768px) */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: calc(var(--bottom-nav-height) + 16px);
+  }
+
+  .navbar__nav {
+    display: none;
+  }
+
+  .navbar__hamburger {
+    display: block;
+  }
+
+  .bottom-nav {
+    display: block;
+  }
+
+  .bento-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .col-span-3,
+  .col-span-4,
+  .col-span-5,
+  .col-span-7,
+  .col-span-8,
+  .col-span-12 {
+    grid-column: span 1;
+  }
+
+  .grid--2,
+  .grid--3,
+  .grid--4 {
+    grid-template-columns: 1fr;
+  }
+
+  .dodont-card {
+    grid-template-columns: 1fr;
+  }
+
+  .footer__grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+  }
+
+  .footer__bottom {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .hospital-card__actions {
+    flex-direction: column;
+  }
+
+  .step-card {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+/* Small Phones (<= 480px) */
+@media (max-width: 480px) {
+  .container {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .card {
+    padding: var(--space-md);
+  }
+
+  .btn--lg {
+    padding: 10px 18px;
+    font-size: var(--text-sm);
+  }
+
+  .text-hero {
+    font-size: 2rem;
+  }
+}
