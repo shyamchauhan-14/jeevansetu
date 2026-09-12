@@ -43,9 +43,6 @@ It uses the **NVIDIA NIM AI platform** (Llama 3.2 Vision Instruct) to perform in
 
 ## 🏁 Getting Started
 
-### Prerequisites
-- Node.js 18+
-- NVIDIA NIM API key (free at [build.nvidia.com](https://build.nvidia.com))
 
 ### Installation
 
@@ -116,9 +113,6 @@ Contributions are welcome! This is a hackathon project aimed at solving real hea
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📜 License
-
-MIT License — see [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgements
 
@@ -156,7 +150,7 @@ The app is explicit about its limits — it **supports and informs**, but never 
 - **Patient Profile & Health History** — optional local-first storage of personal info and past assessments
 - **Accessible by design** — large tap targets, adjustable text size, and offline-capable core screens
 
-## 🧭 App Structure (15 Core Screens)
+## 🧭 App Structure (13 Core Screens)
 
 | # | Screen | Purpose |
 |---|--------|---------|
@@ -171,10 +165,8 @@ The app is explicit about its limits — it **supports and informs**, but never 
 | 9 | Find Healthcare | Nearby facility search (list + map) |
 | 10 | Voice Assistant | Voice-first symptom entry |
 | 11 | Language Selection | Choose preferred regional language |
-| 12 | Patient Profile | Personal & emergency contact info |
-| 13 | Health History | Past assessments and results |
-| 14 | Settings | Language, text size, privacy, permissions |
-| 15 | Safety & Disclaimer | What the app is / is not, safety guidelines |
+| 12 | Settings | Language, text size, privacy, permissions |
+| 13 | Safety & Disclaimer | What the app is / is not, safety guidelines |
 
 Full requirements and acceptance criteria for every screen are documented in [`docs/PRD.md`](docs/PRD.md) (or `docs/JeevanSetu_PRD.docx`).
 
@@ -196,7 +188,6 @@ Full requirements and acceptance criteria for every screen are documented in [`d
 
 **Principles:** clarity over density, color-coded urgency (never color alone — always paired with icon + text), large touch targets, consistent per-category templates, calm non-clinical tone.
 
-See [`docs/PRD.md`](docs/PRD.md) §9 for the full UI/UX theme specification.
 
 ## 🏗️ Tech Stack
 
@@ -226,20 +217,7 @@ npm run dev
 
 Then open `http://localhost:3000` in your browser.
 
-## 📁 Project Structure
 
-```
-jeevansetu/
-├── docs/
-│   └── PRD.md              # Full Product Requirements Document
-├── src/
-│   ├── components/         # Reusable UI components
-│   ├── pages/               # App screens (Home, Symptom Checker, etc.)
-│   ├── assets/               # Icons, illustrations
-│   └── locales/              # Language translation files
-├── public/
-└── README.md
-```
 
 ## 🌍 Localization
 
@@ -269,13 +247,23 @@ JeevanSetu provides educational and triage **guidance** only. It does **not** re
 
 Contributions are welcome! Please open an issue to discuss major changes before submitting a pull request.
 
-## 📄 License
+Contributions are welcome! This is a hackathon project aimed at solving real healthcare access problems in rural India.
 
-`<Add your license here — e.g., MIT>`
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+
 
 ## 👤 Author
 
-**Vaibhav** — Computer Engineering, Academic Major Project
+**Chauhan Shyam** — Computer Engineering, Academic Major Project
+**Suthar Vaibhav** — Computer Engineering, Academic Major Project
+**Rohit Pawar** — Computer Engineering, Academic Major Project
+**Dhairya Parmar** — Computer Engineering, Academic Major Project
+**Abhay Joshi** — Computer Engineering, Academic Major Project
 
 ---
 
