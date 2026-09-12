@@ -15,7 +15,7 @@ export function renderOfflinePage(): string {
   return `
     <div class="page-content">
       <div class="container" style="padding-top: var(--space-lg); padding-bottom: var(--space-3xl);">
-        
+
         <!-- Header Bento -->
         <div class="card card--green" style="border-radius: var(--radius-xl); padding: clamp(24px, 4vw, 40px); margin-bottom: var(--space-xl);">
           <div class="badge badge--green" style="margin-bottom: var(--space-sm);">
@@ -26,8 +26,23 @@ export function renderOfflinePage(): string {
             Prepared for Zero Connectivity
           </h1>
           <p class="text-base text-muted" style="max-width: 650px; line-height: var(--leading-relaxed);">
-            AI triage requires active internet connection, but all 13 life-saving first-aid emergency protocols are stored directly on your phone and ready anytime.
+            AI triage requires active internet connection, but all 13 life-saving first-aid emergency protocols and health guides are stored directly on your phone and ready anytime.
           </p>
+        </div>
+
+        <!-- Download PDF Guide Banner Bento -->
+        <div class="card card--paper" style="border-radius: var(--radius-xl); padding: var(--space-xl); margin-bottom: var(--space-xl); background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1.5px solid #6ee7b7; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; box-shadow: var(--shadow-md);">
+          <div>
+            <div style="font-weight: 800; font-size: var(--text-lg); color: var(--color-primary-dark); display: flex; align-items: center; gap: 8px;">
+              <span>📄</span> Complete Disease & Emergency Medical Manual (PDF)
+            </div>
+            <p class="text-sm text-muted" style="margin-top: 4px; max-width: 640px; line-height: 1.5;">
+              Download a complete printable PDF containing all disease guides (Emergency Signs, First Aid, Maternal Red Flags, Child Diarrhea & ORS, Sanitation, Immunity) and all 13 Emergency Protocols.
+            </p>
+          </div>
+          <button type="button" class="btn btn--primary" style="padding: 14px 24px; font-weight: 700; border-radius: var(--radius-lg); font-size: var(--text-sm);" onclick="window.downloadOfflinePDF()">
+            📥 Download PDF Manual
+          </button>
         </div>
 
         <!-- Offline Status Banner Bento -->

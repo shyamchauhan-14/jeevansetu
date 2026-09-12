@@ -42,17 +42,23 @@ export function renderGuidePage(filterQuery = ''): string {
       <div class="container" style="padding-top: var(--space-lg); padding-bottom: var(--space-3xl);">
         
         <!-- Header -->
-        <div style="margin-bottom: var(--space-xl); max-width: 800px;">
-          <div class="badge badge--green" style="margin-bottom: var(--space-sm);">
-            <span class="badge-dot badge-dot--pulse"></span>
-            ${t('guide.label', 'HEALTH EDUCATION')}
+        <div style="margin-bottom: var(--space-xl); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;">
+          <div style="max-width: 650px;">
+            <div class="badge badge--green" style="margin-bottom: var(--space-sm);">
+              <span class="badge-dot badge-dot--pulse"></span>
+              ${t('guide.label', 'HEALTH EDUCATION')}
+            </div>
+            <h1 class="text-h1" style="line-height: 1.15; margin-bottom: var(--space-xs);">
+              ${t('guide.title', 'Health Guides')}
+            </h1>
+            <p class="text-base text-muted">
+              Practical health knowledge, rural first aid, maternal safety, child hydration, and seasonal illness prevention.
+            </p>
           </div>
-          <h1 class="text-h1" style="line-height: 1.15; margin-bottom: var(--space-xs);">
-            ${t('guide.title', 'Health Guides')}
-          </h1>
-          <p class="text-base text-muted">
-            Practical health knowledge, rural first aid, maternal safety, child hydration, and seasonal illness prevention.
-          </p>
+          <button type="button" class="btn btn--primary btn--sm" style="padding: 10px 18px; font-weight: 700;" onclick="window.downloadOfflinePDF()">
+            📥 Download Full PDF Guide
+          </button>
+        </div>
         </div>
 
         <!-- Search Bar Bento Card -->

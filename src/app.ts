@@ -26,6 +26,8 @@ import { AIService } from './services/aiService';
 import { HealthcareService } from './services/healthcareService';
 import { VoiceService, VoiceState } from './services/voiceService';
 import { StorageService } from './services/storageService';
+import { fetchGPSLocation, fetchIPLocation, GeoLocation } from './services/geoService';
+import { PDFExportService } from './services/pdfExportService';
 import { CARE_TOPICS } from './data/care';
 import { HEALTH_GUIDES } from './data/healthGuides';
 import { FacilityType, AssessmentResult } from './types/health';
@@ -41,6 +43,10 @@ let locatorSearchQuery: string = '';
 let guideSearchQuery: string = '';
 let selectedSymptomIds: Set<string> = new Set();
 let isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+let userGeoLocation: GeoLocation | null = null;
+let hasLocationPermissionBeenPrompted = false;
+let isAIFetchingFacilities = false;
+let locationBadgeLabel = '📍 GPS: Click to Enable';
 
 const router = new Router();
 const appRoot = document.getElementById('app') as HTMLElement;
@@ -232,7 +238,15 @@ router.register('/voice', () => renderVoicePage());
 
 router.register('/care-locator', () => {
   const facilities = HealthcareService.searchFacilities(locatorSearchQuery, locatorActiveFilter as FacilityType | 'ALL');
-  return renderCareLocatorPage(facilities, locatorActiveFilter, locatorSearchQuery);
+  const showPermissionModal = !hasLocationPermissionBeenPrompted;
+  return renderCareLocatorPage(
+    facilities,
+    locatorActiveFilter,
+    locatorSearchQuery,
+    locationBadgeLabel,
+    showPermissionModal,
+    isAIFetchingFacilities
+  );
 });
 
 router.register('/language', () => renderLanguagePage());
@@ -290,13 +304,20 @@ declare global {
     clearTriageHistory: () => void;
     clearAllAppData: () => void;
     openDirections: (name: string, address: string) => void;
-    refreshGeolocation: () => void;
+    refreshGeolocation: () => Promise<void>;
+    grantLocationPermission: () => Promise<void>;
+    useIPLocationFallback: () => Promise<void>;
+    downloadOfflinePDF: () => void;
     quickAnalyzeSymptom: (text: string) => Promise<void>;
     showToast: (msg: string, type?: 'success' | 'error' | 'warning' | 'info', duration?: number) => void;
   }
 }
 
 window.showToast = showToast;
+window.downloadOfflinePDF = () => {
+  showToast('Preparing PDF manual for download...', 'info');
+  PDFExportService.downloadMedicalGuidePDF();
+};
 
 window.toggleMobileMenu = () => {
   const menu = document.getElementById('mobile-menu');
@@ -322,9 +343,6 @@ const LANG_NAMES: Record<string, string> = {
   gu: '🇮🇳 ગુજરાતી'
 };
 
-/**
- * Changes language and translates/adapts active AI assessment
- */
 window.setAppLanguage = async (code: string) => {
   StorageService.setLanguage(code);
   showToast(`${LANG_NAMES[code] || code} selected`, 'success');
@@ -397,7 +415,6 @@ window.handleSymptomSubmit = async (event: Event) => {
       ? 'લક્ષણોનું AI વિશ્લેષણ થઈ રહ્યું છે...'
       : "ANALYZING WHAT'S HAPPENING...";
 
-  // Display Animated AI Loading State
   const mainContent = document.getElementById('main-content');
   if (mainContent) {
     mainContent.innerHTML = renderLoadingState(loadingLabel);
@@ -417,7 +434,6 @@ window.handleSymptomSubmit = async (event: Event) => {
 
     currentTriageResult = result;
 
-    // Save to triage history
     StorageService.addHistoryEntry({
       id: result.id,
       date: result.timestamp,
@@ -437,10 +453,6 @@ window.handleSymptomSubmit = async (event: Event) => {
    FIND CARE LOCATOR & MAP HANDLERS
 ══════════════════════════════════════════ */
 
-/**
- * Instant Search Handler: Updates facility cards and Leaflet map markers
- * WITHOUT wiping out the search input or losing keyboard focus!
- */
 window.handleLocatorSearch = (query: string) => {
   locatorSearchQuery = query;
   const facilities = HealthcareService.searchFacilities(
@@ -448,8 +460,7 @@ window.handleLocatorSearch = (query: string) => {
     locatorActiveFilter as FacilityType | 'ALL'
   );
 
-  // 1. Update facility cards container
-  const container = document.getElementById('facility-cards-container');
+  const container = document.getElementById('locator-facility-list');
   if (container) {
     container.innerHTML =
       facilities.length > 0
@@ -468,8 +479,7 @@ window.handleLocatorSearch = (query: string) => {
         `;
   }
 
-  // 2. Update count indicators
-  const countEl = document.getElementById('facility-count-badge');
+  const countEl = document.getElementById('locator-count');
   if (countEl) {
     countEl.innerText = `${facilities.length} Verified Facilities Located Nearby`;
   }
@@ -478,12 +488,11 @@ window.handleLocatorSearch = (query: string) => {
     tabCount.innerText = `${facilities.length}`;
   }
 
-  // 3. Update map markers dynamically
   MapManager.updateVisibleFacilities(facilities);
 };
 
 window.clearLocatorSearch = () => {
-  const input = document.getElementById('care-locator-search-input') as HTMLInputElement | null;
+  const input = document.getElementById('locator-search-input') as HTMLInputElement | null;
   if (input) {
     input.value = '';
   }
@@ -493,10 +502,9 @@ window.clearLocatorSearch = () => {
 window.setLocatorFilter = (filter: string) => {
   locatorActiveFilter = filter;
 
-  // Update chip button active styling
   document.querySelectorAll('.chip-group .chip').forEach((btn) => {
     const b = btn as HTMLButtonElement;
-    if (b.getAttribute('onclick')?.includes(`'${filter}'`)) {
+    if (b.getAttribute('data-filter') === filter || b.getAttribute('onclick')?.includes(`'${filter}'`)) {
       b.classList.add('selected');
       b.setAttribute('aria-pressed', 'true');
     } else {
@@ -510,7 +518,7 @@ window.setLocatorFilter = (filter: string) => {
     locatorActiveFilter as FacilityType | 'ALL'
   );
 
-  const container = document.getElementById('facility-cards-container');
+  const container = document.getElementById('locator-facility-list');
   if (container) {
     container.innerHTML =
       facilities.length > 0
@@ -524,7 +532,7 @@ window.setLocatorFilter = (filter: string) => {
         `;
   }
 
-  const countEl = document.getElementById('facility-count-badge');
+  const countEl = document.getElementById('locator-count');
   if (countEl) {
     countEl.innerText = `${facilities.length} Verified Facilities Located Nearby`;
   }
@@ -539,7 +547,6 @@ window.setLocatorFilter = (filter: string) => {
 window.focusFacilityOnMap = (facilityId: string) => {
   MapManager.focusFacility(facilityId);
 
-  // On mobile, auto-switch to map view if list is currently shown
   if (window.innerWidth <= 768) {
     window.switchLocatorView('map');
   }
@@ -556,7 +563,7 @@ window.fitAllMapMarkers = () => {
 };
 
 window.filterOnly24x7 = () => {
-  const input = document.getElementById('care-locator-search-input') as HTMLInputElement | null;
+  const input = document.getElementById('locator-search-input') as HTMLInputElement | null;
   if (locatorSearchQuery === '24/7') {
     if (input) input.value = '';
     window.handleLocatorSearch('');
@@ -585,6 +592,81 @@ window.switchLocatorView = (view: 'list' | 'map') => {
     if (btnList) btnList.className = 'btn btn--secondary btn--sm';
     if (btnMap) btnMap.className = 'btn btn--primary btn--sm';
     MapManager.invalidateSize();
+  }
+};
+
+async function executeAIFacilityFetch(locationName: string): Promise<void> {
+  isAIFetchingFacilities = true;
+  router.handleHashChange(); // Show AI loading state
+
+  try {
+    showToast(`🤖 AI fetching nearby facilities for ${locationName}...`, 'info');
+    const aiFacilities = await AIService.fetchNearbyFacilities(locationName);
+    HealthcareService.setFacilities(aiFacilities);
+    showToast(`AI loaded ${aiFacilities.length} nearby medical centers!`, 'success');
+  } catch (err) {
+    console.warn('Error during AI facility fetch:', err);
+  } finally {
+    isAIFetchingFacilities = false;
+    router.handleHashChange(); // Render facilities
+  }
+}
+
+window.grantLocationPermission = async () => {
+  hasLocationPermissionBeenPrompted = true;
+  showToast('Acquiring high-accuracy GPS location...', 'info');
+
+  try {
+    userGeoLocation = await fetchGPSLocation();
+    locationBadgeLabel = `📍 GPS: ${userGeoLocation.displayName}`;
+    await executeAIFacilityFetch(userGeoLocation.displayName);
+  } catch (err) {
+    console.warn('GPS failed/denied, falling back to IP location:', err);
+    try {
+      userGeoLocation = await fetchIPLocation();
+      locationBadgeLabel = `🌐 IP: ${userGeoLocation.displayName}`;
+      await executeAIFacilityFetch(userGeoLocation.displayName);
+    } catch {
+      locationBadgeLabel = '📍 Location: Gandhidham, Gujarat';
+      await executeAIFacilityFetch('Gandhidham, Gujarat');
+    }
+  }
+};
+
+window.useIPLocationFallback = async () => {
+  hasLocationPermissionBeenPrompted = true;
+
+  try {
+    userGeoLocation = await fetchIPLocation();
+    locationBadgeLabel = `🌐 Location: ${userGeoLocation.displayName}`;
+    await executeAIFacilityFetch(userGeoLocation.displayName);
+  } catch {
+    locationBadgeLabel = '🌐 Location: Gandhidham, Gujarat';
+    await executeAIFacilityFetch('Gandhidham, Gujarat');
+  }
+};
+
+window.refreshGeolocation = async () => {
+  hasLocationPermissionBeenPrompted = true;
+  const badge = document.getElementById('locator-gps-badge');
+  if (badge) badge.innerHTML = '⏳ Acquiring GPS...';
+  showToast('Acquiring GPS location & AI facilities...', 'info');
+
+  try {
+    userGeoLocation = await fetchGPSLocation();
+    locationBadgeLabel = `📍 GPS: ${userGeoLocation.displayName}`;
+    if (badge) badge.innerHTML = locationBadgeLabel;
+    await executeAIFacilityFetch(userGeoLocation.displayName);
+  } catch {
+    try {
+      userGeoLocation = await fetchIPLocation();
+      locationBadgeLabel = `🌐 IP: ${userGeoLocation.displayName}`;
+      if (badge) badge.innerHTML = locationBadgeLabel;
+      await executeAIFacilityFetch(userGeoLocation.displayName);
+    } catch {
+      if (badge) badge.innerHTML = '📍 Gandhidham, Gujarat';
+      await executeAIFacilityFetch('Gandhidham, Gujarat');
+    }
   }
 };
 
@@ -790,28 +872,6 @@ window.clearAllAppData = () => {
 window.openDirections = (name: string, address: string) => {
   const query = encodeURIComponent(`${name}, ${address}`);
   window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
-};
-
-window.refreshGeolocation = () => {
-  if (typeof navigator !== 'undefined' && navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        showToast(`GPS verified: ${pos.coords.latitude.toFixed(4)}° N, ${pos.coords.longitude.toFixed(4)}° E`, 'success');
-        MapManager.initMap('care-map', HealthcareService.getAllFacilities(), {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude
-        });
-      },
-      () => {
-        MapManager.centerUser();
-        showToast('GPS locked: Pune Rural hub (18.8527° N, 73.9189° E)', 'success');
-      },
-      { timeout: 5000 }
-    );
-  } else {
-    MapManager.centerUser();
-    showToast('GPS locked: Pune Rural hub (18.8527° N, 73.9189° E)', 'success');
-  }
 };
 
 /* ══════════════════════════════════════════

@@ -2,12 +2,20 @@ import { HealthcareFacility, FacilityType } from '../types/health';
 import { HEALTHCARE_FACILITIES } from '../data/healthcare';
 
 export class HealthcareService {
+  private static activeFacilities: HealthcareFacility[] = HEALTHCARE_FACILITIES;
+
+  public static setFacilities(facilities: HealthcareFacility[]): void {
+    if (facilities && facilities.length > 0) {
+      this.activeFacilities = facilities;
+    }
+  }
+
   public static getAllFacilities(): HealthcareFacility[] {
-    return [...HEALTHCARE_FACILITIES].sort((a, b) => a.distanceKm - b.distanceKm);
+    return [...this.activeFacilities].sort((a, b) => a.distanceKm - b.distanceKm);
   }
 
   public static searchFacilities(query: string, filterType?: FacilityType | 'ALL'): HealthcareFacility[] {
-    let list = [...HEALTHCARE_FACILITIES];
+    let list = [...this.activeFacilities];
 
     if (filterType && filterType !== 'ALL') {
       list = list.filter((f) => f.type === filterType);
@@ -49,6 +57,6 @@ export class HealthcareService {
   }
 
   public static getFacilityById(id: string): HealthcareFacility | undefined {
-    return HEALTHCARE_FACILITIES.find((f) => f.id === id);
+    return this.activeFacilities.find((f) => f.id === id);
   }
 }

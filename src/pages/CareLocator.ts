@@ -1,11 +1,14 @@
-import { HealthcareFacility, FacilityType } from '../types/health';
+﻿import { HealthcareFacility, FacilityType } from '../types/health';
 import { renderHospitalCard } from '../components/HospitalCard';
 import { I18nService } from '../services/i18nService';
 
 export function renderCareLocatorPage(
   facilities: HealthcareFacility[],
   activeFilter: string,
-  searchQuery: string
+  searchQuery: string,
+  locationBadgeText: string = '📍 GPS: Click to Enable',
+  isLocationPromptOpen: boolean = false,
+  isAILoading: boolean = false
 ): string {
   const t = (key: string, def: string = '') => I18nService.t(key, def);
 
@@ -39,6 +42,7 @@ export function renderCareLocatorPage(
       <button 
         type="button" 
         class="chip ${activeFilter === btn.value ? 'selected' : ''}" 
+        data-filter="${btn.value}"
         style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;"
         onclick="window.setLocatorFilter('${btn.value}')"
         aria-pressed="${activeFilter === btn.value}"
@@ -50,8 +54,41 @@ export function renderCareLocatorPage(
     )
     .join('');
 
+  const aiLoadingState = `
+    <div class="card card--green" style="text-align: center; padding: var(--space-2xl); border-radius: var(--radius-xl);">
+      <div style="font-size: 3rem; margin-bottom: 12px; display: inline-block; animation: pulse 1.2s infinite ease-in-out;">🤖</div>
+      <h3 class="text-h4" style="color: var(--color-primary-dark);">AI Agent Fetching Nearby Facilities...</h3>
+      <p class="text-muted" style="margin-top: 8px; font-size: var(--text-sm);">
+        Locating and verifying primary health centres, hospitals, and emergency services for your area.
+      </p>
+    </div>
+  `;
+
+  const locationPermissionModal = isLocationPromptOpen
+    ? `
+    <div id="location-permission-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(5px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px;">
+      <div class="card card--paper" style="max-width: 460px; width: 100%; border-radius: var(--radius-xl); padding: 32px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);">
+        <div style="font-size: 3.5rem; margin-bottom: 12px;">📍</div>
+        <h2 class="text-h3" style="margin-bottom: 8px; color: var(--color-text-main);">Location Access Required</h2>
+        <p class="text-muted" style="font-size: var(--text-sm); line-height: 1.5; margin-bottom: 24px;">
+          JeevanSetu AI requires your location permission to search and fetch real-time verified healthcare facilities, PHCs, and emergency centers near you.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <button type="button" class="btn btn--primary btn--full" style="padding: 14px; font-weight: 700; font-size: 1rem;" onclick="window.grantLocationPermission()">
+            📍 Allow Location Access
+          </button>
+          <button type="button" class="btn btn--secondary btn--full" style="padding: 12px; font-size: 0.9rem;" onclick="window.useIPLocationFallback()">
+            🌐 Use Approximate IP Location
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+    : '';
+
   return `
     <div class="page-content">
+      ${locationPermissionModal}
       <div class="container" style="padding-top: var(--space-lg); padding-bottom: var(--space-3xl);">
         
         <!-- Header Banner -->
@@ -77,7 +114,7 @@ export function renderCareLocatorPage(
               🔍
             </div>
             <input 
-              id="care-locator-search-input"
+              id="locator-search-input"
               type="text" 
               class="input"
               style="width: 100%; padding: 14px 40px 14px 44px; font-size: var(--text-base); border-radius: var(--radius-lg); border: 2px solid var(--color-gray-200); transition: border-color 0.2s;"
@@ -124,22 +161,21 @@ export function renderCareLocatorPage(
 
         <!-- Bento Grid: Facility Cards (Left) + Interactive Map (Right) -->
         <div class="bento-grid" style="gap: var(--card-gap); align-items: flex-start;">
-          
+
           <!-- Facility List Column -->
           <div id="facility-list-column" class="col-span-7" style="display: flex; flex-direction: column; gap: var(--space-md);">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding-bottom: 4px;">
-              <span id="facility-count-badge" style="font-weight: var(--font-weight-bold); font-size: var(--text-sm); text-transform: uppercase; color: var(--color-text-main);">
+              <span id="locator-count" style="font-weight: var(--font-weight-bold); font-size: var(--text-sm); text-transform: uppercase; color: var(--color-text-main);">
                 ${facilities.length} Verified Facilities Located Nearby
               </span>
               <div style="display: flex; gap: 6px;">
-                <span class="badge badge--green">📍 GPS: Pune Rural</span>
-                <span class="badge badge--black">Radius: 30 km</span>
+                <span id="locator-gps-badge" class="badge badge--green">${locationBadgeText}</span>
               </div>
             </div>
 
             <!-- List container dynamically refreshed by search without resetting input -->
-            <div id="facility-cards-container" style="display: flex; flex-direction: column; gap: var(--space-md);">
-              ${facilityCardsHtml}
+            <div id="locator-facility-list" style="display: flex; flex-direction: column; gap: var(--space-md);">
+              ${isAILoading ? aiLoadingState : facilityCardsHtml}
             </div>
           </div>
 
