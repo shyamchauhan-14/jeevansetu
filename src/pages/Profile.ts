@@ -1,7 +1,9 @@
 import { StorageService } from '../services/storageService';
+import { I18nService } from '../services/i18nService';
 
 export function renderProfilePage(): string {
   const profile = StorageService.getProfile();
+  const t = (key: string, def: string = '') => I18nService.t(key, def);
 
   return `
     <div class="page-content">
@@ -11,13 +13,13 @@ export function renderProfilePage(): string {
         <div style="margin-bottom: var(--space-xl);">
           <div class="badge badge--green" style="margin-bottom: var(--space-sm);">
             <span class="badge-dot badge-dot--pulse"></span>
-            OPTIONAL LOCAL PROFILE
+            ${t('profile.label', 'OPTIONAL LOCAL PROFILE')}
           </div>
           <h1 class="text-h1" style="line-height: 1.15; margin-bottom: var(--space-xs);">
-            Medical Profile
+            ${t('profile.title', 'Medical Profile')}
           </h1>
           <p class="text-base text-muted">
-            Saving your basic medical details helps the AI provide more personalized triage guidance.
+            ${t('profile.subtitle', 'Saving your basic medical details helps the AI provide more personalized triage guidance.')}
           </p>
         </div>
 
@@ -39,18 +41,18 @@ export function renderProfilePage(): string {
           
           <div class="grid grid--2">
             <div class="input-wrap">
-              <label class="input-label" for="profile-name">Full Name</label>
+              <label class="input-label" for="profile-name">${t('profile.name', 'Full Name')}</label>
               <input type="text" id="profile-name" name="name" class="input" value="${profile.name}" required />
             </div>
 
             <div class="grid grid--2">
               <div class="input-wrap">
-                <label class="input-label" for="profile-age">Age</label>
+                <label class="input-label" for="profile-age">${t('profile.age', 'Age')}</label>
                 <input type="number" id="profile-age" name="age" class="input" value="${profile.age}" min="1" max="120" required />
               </div>
 
               <div class="input-wrap">
-                <label class="input-label" for="profile-sex">Sex</label>
+                <label class="input-label" for="profile-sex">${t('profile.sex', 'Sex')}</label>
                 <select id="profile-sex" name="sex" class="select">
                   <option value="male" ${profile.sex === 'male' ? 'selected' : ''}>Male</option>
                   <option value="female" ${profile.sex === 'female' ? 'selected' : ''}>Female</option>
@@ -62,17 +64,17 @@ export function renderProfilePage(): string {
 
           <div class="grid grid--3">
             <div class="input-wrap">
-              <label class="input-label" for="profile-village">Village / Town</label>
+              <label class="input-label" for="profile-village">${t('profile.village', 'Village / Town')}</label>
               <input type="text" id="profile-village" name="villageTown" class="input" value="${profile.villageTown}" />
             </div>
 
             <div class="input-wrap">
-              <label class="input-label" for="profile-district">District</label>
+              <label class="input-label" for="profile-district">${t('profile.district', 'District')}</label>
               <input type="text" id="profile-district" name="district" class="input" value="${profile.district}" />
             </div>
 
             <div class="input-wrap">
-              <label class="input-label" for="profile-pincode">PIN Code</label>
+              <label class="input-label" for="profile-pincode">${t('profile.pincode', 'PIN Code')}</label>
               <input type="text" id="profile-pincode" name="pincode" class="input" value="${profile.pincode}" />
             </div>
           </div>
@@ -110,7 +112,7 @@ export function renderProfilePage(): string {
 
           <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: var(--space-md);">
             <button type="submit" class="btn btn--primary btn--lg">
-              Save Medical Profile ✓
+              ${t('profile.save', 'Save Medical Profile')} ✓
             </button>
           </div>
 

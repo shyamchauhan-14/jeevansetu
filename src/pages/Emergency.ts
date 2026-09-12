@@ -1,6 +1,8 @@
 import { EMERGENCY_PROTOCOLS } from '../data/emergencies';
+import { I18nService } from '../services/i18nService';
 
 export function renderEmergencyPage(): string {
+  const t = (key: string, def: string = '') => I18nService.t(key, def);
   const protocolCardsHtml = EMERGENCY_PROTOCOLS.map((protocol) => `
     <a href="#/emergency/${protocol.slug}" class="card card--paper card--clickable" style="text-decoration: none; padding: var(--space-md); border-radius: var(--radius-lg); display: flex; align-items: center; gap: 14px;">
       <div style="font-size: 2.2rem; line-height: 1; flex-shrink: 0;">${protocol.icon}</div>
@@ -24,19 +26,19 @@ export function renderEmergencyPage(): string {
             <div>
               <div class="badge badge--red" style="margin-bottom: var(--space-sm);">
                 <span class="badge-dot badge-dot--pulse"></span>
-                24/7 CRITICAL EMERGENCY DIRECTORY
+                ${t('emergency.badge', 'LIFE-THREATENING SITUATIONS')}
               </div>
               <h1 class="text-h1" style="line-height: 1.1; margin-bottom: var(--space-xs); color: var(--color-danger-dark);">
-                Need Emergency Help Right Now?
+                ${t('emergency.title', 'Emergency First Aid')}
               </h1>
               <p class="text-base text-body" style="max-width: 600px; line-height: var(--leading-relaxed);">
-                Select an emergency category below for immediate, verified step-by-step first-aid while medical help is on the way.
+                ${t('emergency.subtitle', 'Select an emergency category below for immediate, verified step-by-step first-aid while medical help is on the way.')}
               </p>
             </div>
 
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: var(--space-md);">
-              <span class="badge badge--paper">🚑 Dial 108 Ambulance</span>
-              <span class="badge badge--paper">🤱 Dial 102 Maternal</span>
+              <span class="badge badge--paper">🚑 ${t('emergency.callAmb', 'Dial 108 Ambulance')}</span>
+              <span class="badge badge--paper">🤱 ${t('emergency.callMat', 'Dial 102 Maternal')}</span>
               <span class="badge badge--paper">🚨 Dial 112 National</span>
             </div>
           </div>

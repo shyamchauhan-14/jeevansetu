@@ -1,7 +1,9 @@
 import { StorageService } from '../services/storageService';
+import { I18nService } from '../services/i18nService';
 
 export function renderHistoryPage(): string {
   const history = StorageService.getHistory();
+  const t = (key: string, def: string = '') => I18nService.t(key, def);
 
   const historyItemsHtml = history
     .map((item) => {
@@ -35,10 +37,10 @@ export function renderHistoryPage(): string {
           <div>
             <div class="badge badge--green" style="margin-bottom: var(--space-sm);">
               <span class="badge-dot badge-dot--pulse"></span>
-              PAST ASSESSMENTS
+              ${t('history.label', 'PAST ASSESSMENTS')}
             </div>
             <h1 class="text-h1" style="line-height: 1.15; margin-bottom: var(--space-xs);">
-              Triage History
+              ${t('history.title', 'Triage History')}
             </h1>
             <p class="text-base text-muted">
               Review previous symptom evaluations and recommended clinical actions.
@@ -49,7 +51,7 @@ export function renderHistoryPage(): string {
             history.length > 0
               ? `
             <button type="button" class="btn btn--ghost btn--sm" onclick="window.clearTriageHistory()">
-              🗑️ Clear History
+              🗑️ ${t('history.clear', 'Clear History')}
             </button>
           `
               : ''
@@ -64,7 +66,7 @@ export function renderHistoryPage(): string {
               : `
             <div class="card card--paper" style="text-align: center; padding: var(--space-3xl); border-radius: var(--radius-xl);">
               <div style="font-size: 3rem; margin-bottom: 12px;">📋</div>
-              <h3 class="text-h4">No assessment history yet</h3>
+              <h3 class="text-h4">${t('history.empty', 'No assessment history yet')}</h3>
               <p class="text-muted" style="margin-top: 6px; margin-bottom: 16px;">
                 When you run a symptom check or voice triage, records will appear here.
               </p>

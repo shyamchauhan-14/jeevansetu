@@ -1,7 +1,9 @@
 import { StorageService } from '../services/storageService';
+import { I18nService } from '../services/i18nService';
 
 export function renderSettingsPage(): string {
   const currentLang = StorageService.getLanguage();
+  const t = (key: string, def: string = '') => I18nService.t(key, def);
 
   return `
     <div class="page-content">
@@ -11,10 +13,10 @@ export function renderSettingsPage(): string {
         <div style="margin-bottom: var(--space-xl);">
           <div class="badge badge--green" style="margin-bottom: var(--space-sm);">
             <span class="badge-dot badge-dot--pulse"></span>
-            APP PREFERENCES
+            ${t('settings.label', 'APP PREFERENCES')}
           </div>
           <h1 class="text-h1" style="line-height: 1.15; margin-bottom: var(--space-xs);">
-            Settings & Accessibility
+            ${t('settings.title', 'Settings & Accessibility')}
           </h1>
           <p class="text-base text-muted">
             Configure accessibility, audio, language, and offline storage preferences.

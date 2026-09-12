@@ -6,71 +6,95 @@ export const HEALTHCARE_FACILITIES: HealthcareFacility[] = [
     name: 'Primary Health Centre (PHC) Khed',
     type: 'Primary Health Centre (PHC)',
     distanceKm: 2.4,
+    estimatedDriveTimeMin: 7,
+    lat: 18.8475,
+    lng: 73.9056,
     locationName: 'Khed Village, Taluka Road',
     phone: '+91 2135 222108',
     isOpen24x7: false,
     hasAmbulance: true,
     hasEmergencyBed: true,
-    address: 'Near Gram Panchayat Office, Khed 410501'
+    address: 'Near Gram Panchayat Office, Khed 410501',
+    specialties: ['General Medicine', 'Maternal Delivery', 'Vaccination', 'Basic Triage', 'Anti-Rabies']
   },
   {
     id: 'chc-manchar',
     name: 'Community Health Centre (CHC) Manchar',
     type: 'Community Health Centre (CHC)',
     distanceKm: 8.5,
+    estimatedDriveTimeMin: 18,
+    lat: 19.0062,
+    lng: 73.9405,
     locationName: 'Manchar Main Hospital Complex',
     phone: '+91 2133 223400',
     isOpen24x7: true,
     hasAmbulance: true,
     hasEmergencyBed: true,
-    address: 'State Highway 50, Manchar Rural Hospital, Pune District 410503'
+    address: 'State Highway 50, Manchar Rural Hospital, Pune District 410503',
+    specialties: ['Emergency Room', 'Minor Surgery', 'Obstetrics', 'Anti-Venom (Snakebite)', 'Pathology Lab']
   },
   {
     id: 'district-hospital-junnar',
     name: 'Sub-District General Hospital Junnar',
     type: 'District Hospital',
     distanceKm: 18.2,
+    estimatedDriveTimeMin: 34,
+    lat: 19.2065,
+    lng: 73.8767,
     locationName: 'Junnar Civil Lines',
     phone: '+91 2132 242200',
     isOpen24x7: true,
     hasAmbulance: true,
     hasEmergencyBed: true,
-    address: 'Near Old Bus Stand, Junnar 410502 (Full Surgery, CT Scan, ICU, Snake Venom)'
+    address: 'Near Old Bus Stand, Junnar 410502',
+    specialties: ['Full Surgery', 'CT Scan & X-Ray', 'ICU & Oxygen Beds', 'Pediatric Unit', 'Polyvalent Anti-Venom']
   },
   {
     id: 'sevatrust-clinic',
     name: 'Sanjeevani Charitable Rural Clinic',
     type: 'Private Clinic',
     distanceKm: 4.1,
+    estimatedDriveTimeMin: 11,
+    lat: 18.6775,
+    lng: 73.8967,
     locationName: 'Alandi Rural Sector',
     phone: '+91 98220 11223',
     isOpen24x7: false,
     hasAmbulance: false,
     hasEmergencyBed: false,
-    address: 'Opposite Milk Cooperative Society, Alandi Phata 412105'
+    address: 'Opposite Milk Cooperative Society, Alandi Phata 412105',
+    specialties: ['Outpatient Consultation', 'Diabetes & BP Screening', 'First Aid Dressing', 'Child Wellness']
   },
   {
     id: 'jan-aushadhi-khed',
     name: 'Pradhan Mantri Jan Aushadhi Kendra',
     type: '24/7 Pharmacy',
     distanceKm: 2.1,
+    estimatedDriveTimeMin: 6,
+    lat: 18.849,
+    lng: 73.907,
     locationName: 'Market Yard, Khed',
     phone: '+91 94220 55678',
     isOpen24x7: true,
     hasAmbulance: false,
     hasEmergencyBed: false,
-    address: 'Shop No 4, Market Complex, Opp Bus Depot, Khed 410501'
+    address: 'Shop No 4, Market Complex, Opp Bus Depot, Khed 410501',
+    specialties: ['Generic Essential Medicines', 'ORS & IV Fluids', 'Antibiotics (Rx)', 'Nebulizer & BP Kits']
   },
   {
     id: 'district-emergency-apex',
     name: 'District Trauma & Emergency Centre',
     type: 'Emergency Care',
     distanceKm: 26.0,
+    estimatedDriveTimeMin: 45,
+    lat: 18.5273,
+    lng: 73.8736,
     locationName: 'District Headquarters Medical Hub',
     phone: '108 / +91 20 2612 7000',
     isOpen24x7: true,
     hasAmbulance: true,
     hasEmergencyBed: true,
-    address: 'Sassoon General Hospital & Trauma Centre, Pune 411001'
+    address: 'Sassoon General Hospital & Trauma Centre, Pune 411001',
+    specialties: ['24/7 Level-1 Trauma', 'Cardiac Catheterization', 'Neuro ICU', 'Major Burns Unit', 'Blood Bank']
   }
 ];

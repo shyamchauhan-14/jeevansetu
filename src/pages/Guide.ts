@@ -1,6 +1,8 @@
 import { HEALTH_GUIDES } from '../data/healthGuides';
+import { I18nService } from '../services/i18nService';
 
 export function renderGuidePage(filterQuery = ''): string {
+  const t = (key: string, def: string = '') => I18nService.t(key, def);
   let list = HEALTH_GUIDES;
   if (filterQuery.trim()) {
     const q = filterQuery.toLowerCase();
@@ -43,10 +45,10 @@ export function renderGuidePage(filterQuery = ''): string {
         <div style="margin-bottom: var(--space-xl); max-width: 800px;">
           <div class="badge badge--green" style="margin-bottom: var(--space-sm);">
             <span class="badge-dot badge-dot--pulse"></span>
-            COMMUNITY HEALTH WISDOM
+            ${t('guide.label', 'HEALTH EDUCATION')}
           </div>
           <h1 class="text-h1" style="line-height: 1.15; margin-bottom: var(--space-xs);">
-            Health Information Guide
+            ${t('guide.title', 'Health Guides')}
           </h1>
           <p class="text-base text-muted">
             Practical health knowledge, rural first aid, maternal safety, child hydration, and seasonal illness prevention.
@@ -59,7 +61,7 @@ export function renderGuidePage(filterQuery = ''): string {
             <span style="font-size: 1.2rem; margin-right: 8px;">🔍</span>
             <input 
               type="text" 
-              placeholder="What health topic do you want to learn about? (e.g. ORS, fever, snake bite, pregnancy)"
+              placeholder="${t('guide.search', 'Search guides...')}"
               value="${filterQuery}"
               oninput="window.handleGuideSearch(this.value)"
             />

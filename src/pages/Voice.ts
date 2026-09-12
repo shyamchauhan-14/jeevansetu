@@ -1,4 +1,7 @@
+import { I18nService } from '../services/i18nService';
+
 export function renderVoicePage(): string {
+  const t = (key: string, def: string = '') => I18nService.t(key, def);
   return `
     <div class="page-content">
       <div class="container" style="padding-top: var(--space-lg); padding-bottom: var(--space-3xl); max-width: 760px; text-align: center;">
@@ -7,13 +10,13 @@ export function renderVoicePage(): string {
         <div style="margin-bottom: var(--space-xl);">
           <div class="badge badge--green" style="margin-bottom: var(--space-sm);">
             <span class="badge-dot badge-dot--pulse"></span>
-            VOICE-FIRST ASSISTANT
+            ${t('voice.label', 'VOICE-FIRST ASSISTANT')}
           </div>
           <h1 class="text-h1" style="line-height: 1.15; margin-bottom: var(--space-xs);">
-            Tell Us What's Happening
+            ${t('voice.title', 'Tell Us What\'s Happening')}
           </h1>
           <p class="text-base text-muted">
-            Speak naturally in Hindi, Marathi, Gujarati, English, or your regional language. JeevanSetu will listen and guide you step by step.
+            ${t('voice.subtitle', 'Speak naturally in Hindi, Marathi, Gujarati, English, or your regional language. JeevanSetu will listen and guide you step by step.')}
           </p>
         </div>
 
@@ -41,7 +44,7 @@ export function renderVoicePage(): string {
           </div>
 
           <div id="voice-status-text" style="font-size: var(--text-h5); font-weight: var(--font-weight-bold); color: var(--color-text-main); margin-top: 4px;">
-            Tap microphone to speak
+            ${t('voice.tapToSpeak', 'Tap microphone to speak')}
           </div>
 
           <div id="voice-subtext" class="text-xs text-muted" style="margin-top: 4px;">
@@ -60,15 +63,15 @@ export function renderVoicePage(): string {
             id="voice-transcript-output" 
             style="min-height: 70px; font-size: var(--text-base); line-height: var(--leading-relaxed); color: var(--color-text-main);"
           >
-            <em class="text-muted">Your spoken words will appear here in real time...</em>
+            <em class="text-muted">${t('voice.placeholder', 'Your spoken words will appear here in real time...')}</em>
           </div>
 
           <div id="voice-actions" style="display: none; margin-top: var(--space-md); border-top: 1px solid var(--color-gray-200); padding-top: var(--space-md); justify-content: flex-end; gap: 10px;">
             <button type="button" class="btn btn--ghost btn--sm" onclick="window.clearVoiceTranscript()">
-              Clear
+              ${t('voice.clear', 'Clear')}
             </button>
             <button type="button" class="btn btn--primary btn--sm" onclick="window.submitVoiceTranscript()">
-              Analyze Spoken Symptoms →
+              ${t('voice.analyze', '⚡ Analyze Voice Symptoms')}
             </button>
           </div>
         </div>

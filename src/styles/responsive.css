@@ -70,6 +70,10 @@
     flex-direction: column;
   }
 
+  .mobile-locator-tabs {
+    display: flex !important;
+  }
+
   .step-card {
     flex-direction: column;
     gap: 10px;

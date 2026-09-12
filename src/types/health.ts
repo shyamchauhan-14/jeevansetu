@@ -19,6 +19,10 @@ export interface HealthcareFacility {
   hasAmbulance: boolean;
   hasEmergencyBed: boolean;
   address: string;
+  lat: number;
+  lng: number;
+  estimatedDriveTimeMin?: number;
+  specialties?: string[];
 }
 
 export interface LanguageOption {
@@ -128,6 +132,11 @@ export interface AssessmentResult {
   timeframe: string;
   suggestedCareType: 'emergency_hospital' | 'clinic_visit' | 'home_support' | string;
   disclaimer: string;
+  isValidHealthQuery?: boolean;
+  invalidReason?: string;
+  identifiedDisease?: string;
+  medicalCure?: string[];
+  dietaryCure?: string[];
 }
 
 export interface UserProfile {

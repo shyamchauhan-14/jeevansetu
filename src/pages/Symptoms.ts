@@ -1,6 +1,8 @@
 import { COMMON_SYMPTOMS, FOLLOW_UP_QUESTIONS } from '../data/symptoms';
+import { I18nService } from '../services/i18nService';
 
 export function renderSymptomsPage(): string {
+  const t = (key: string, def: string = '') => I18nService.t(key, def);
   const chipsHtml = COMMON_SYMPTOMS.map((symptom) => {
     const redFlagAttr = symptom.isRedFlag ? 'data-redflag="true"' : '';
     const badgeText = symptom.isRedFlag ? '<span style="color: var(--color-danger); margin-left: 4px;">●</span>' : '';
@@ -28,13 +30,13 @@ export function renderSymptomsPage(): string {
         <div style="margin-bottom: var(--space-xl);">
           <div class="badge badge--green" style="margin-bottom: var(--space-sm);">
             <span class="badge-dot badge-dot--pulse"></span>
-            AI SYMPTOM TRIAGE
+            ${t('symptoms.label', 'AI SYMPTOM TRIAGE')}
           </div>
           <h1 class="text-h1" style="line-height: 1.15; margin-bottom: var(--space-xs);">
-            What symptoms are you experiencing?
+            ${t('symptoms.title', 'What symptoms are you experiencing?')}
           </h1>
           <p class="text-base text-muted">
-            Tell us what you or your family member are feeling. We will evaluate urgency and recommend safe next steps.
+            ${t('symptoms.subtitle', 'Tell us what you or your family member are feeling. We will evaluate urgency and recommend safe next steps.')}
           </p>
         </div>
 
@@ -44,10 +46,10 @@ export function renderSymptomsPage(): string {
           <div class="card card--paper" style="margin-bottom: var(--space-lg); border-radius: var(--radius-xl);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-sm); flex-wrap: wrap; gap: 8px;">
               <label for="symptom-description" class="input-label" style="font-size: var(--text-base); margin-bottom: 0;">
-                1. Describe in your own words
+                1. ${t('symptoms.description', 'Describe in your own words')}
               </label>
               <a href="#/voice" class="btn btn--outline btn--sm">
-                🎙️ Speak Instead
+                🎙️ ${t('voice.typeInstead', 'Speak Instead')}
               </a>
             </div>
 
@@ -55,7 +57,7 @@ export function renderSymptomsPage(): string {
               id="symptom-description" 
               name="description" 
               class="textarea" 
-              placeholder="Example: High fever since yesterday, chest tightness, headache, and feeling dizzy when standing..."
+              placeholder="${t('symptoms.description.placeholder', 'Example: High fever since yesterday, chest tightness, headache...')}"
               rows="3"
             ></textarea>
           </div>
@@ -115,19 +117,19 @@ export function renderSymptomsPage(): string {
             <div class="grid grid--3">
               <label class="card card--green card--clickable" style="display: flex; flex-direction: column; gap: 6px; padding: var(--space-md); border-radius: var(--radius-md);">
                 <input type="radio" name="severity" value="mild" checked style="accent-color: var(--color-primary);" />
-                <span style="font-weight: var(--font-weight-bold); font-size: var(--text-base); color: var(--color-primary-dark);">🟢 Mild</span>
+                <span style="font-weight: var(--font-weight-bold); font-size: var(--text-base); color: var(--color-primary-dark);">🟢 ${t('symptoms.severity.mild', 'Mild (Bearable)')}</span>
                 <span style="font-size: var(--text-xs); color: var(--color-text-muted);">Able to speak & move normally</span>
               </label>
 
               <label class="card card--orange card--clickable" style="display: flex; flex-direction: column; gap: 6px; padding: var(--space-md); border-radius: var(--radius-md);">
                 <input type="radio" name="severity" value="moderate" style="accent-color: var(--color-warning);" />
-                <span style="font-weight: var(--font-weight-bold); font-size: var(--text-base); color: var(--color-warning-dark);">🟠 Moderate</span>
+                <span style="font-weight: var(--font-weight-bold); font-size: var(--text-base); color: var(--color-warning-dark);">🟠 ${t('symptoms.severity.moderate', 'Moderate (Concerning)')}</span>
                 <span style="font-size: var(--text-xs); color: var(--color-text-muted);">Significant distress, resting</span>
               </label>
 
               <label class="card card--red card--clickable" style="display: flex; flex-direction: column; gap: 6px; padding: var(--space-md); border-radius: var(--radius-md);">
                 <input type="radio" name="severity" value="severe" style="accent-color: var(--color-danger);" />
-                <span style="font-weight: var(--font-weight-bold); font-size: var(--text-base); color: var(--color-danger-dark);">🔴 Severe</span>
+                <span style="font-weight: var(--font-weight-bold); font-size: var(--text-base); color: var(--color-danger-dark);">🔴 ${t('symptoms.severity.severe', 'Severe (Very Distressing)')}</span>
                 <span style="font-size: var(--text-xs); color: var(--color-text-muted);">Unbearable, cannot stand/talk</span>
               </label>
             </div>
@@ -136,11 +138,11 @@ export function renderSymptomsPage(): string {
           <!-- Submit Action -->
           <div style="display: flex; gap: var(--space-md); align-items: center; justify-content: space-between; flex-wrap: wrap;">
             <a href="#/" class="btn btn--ghost">
-              ← Back to Home
+              ← ${t('nav.home', 'Back to Home')}
             </a>
             
             <button type="submit" class="btn btn--primary btn--xl" id="submit-triage-btn">
-              Analyze Symptoms & Get Guidance →
+              ${t('symptoms.submit', 'Analyze Symptoms & Get Guidance →')}
             </button>
           </div>
 

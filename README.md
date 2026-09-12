@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🌿 JeevanSetu — AI-Powered Rural Health Companion
 
 <div align="center">
@@ -129,3 +130,8 @@ MIT License — see [LICENSE](LICENSE) for details.
 <div align="center">
   Made with ❤️ for rural India | JeevanSetu — जीवन सेतु
 </div>
+=======
+# jeevansetu
+[Uploading JeevanSetu_PRD (2).docx…]()
+
+>>>>>>> 882dc9a315b56b14f43f2621e850c369f8776404

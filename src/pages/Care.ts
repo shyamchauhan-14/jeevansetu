@@ -1,6 +1,8 @@
 import { CARE_TOPICS } from '../data/care';
+import { I18nService } from '../services/i18nService';
 
 export function renderCarePage(): string {
+  const t = (key: string, def: string = '') => I18nService.t(key, def);
   const cardsHtml = CARE_TOPICS.map((topic) => `
     <a href="#/care/${topic.slug}" class="card card--paper card--clickable" style="text-decoration: none; border-radius: var(--radius-xl); display: flex; flex-direction: column; justify-content: space-between; min-height: 240px; padding: var(--space-lg);">
       <div>
@@ -26,13 +28,13 @@ export function renderCarePage(): string {
         <div style="margin-bottom: var(--space-xl); max-width: 800px;">
           <div class="badge badge--green" style="margin-bottom: var(--space-sm);">
             <span class="badge-dot badge-dot--pulse"></span>
-            SUPPORTIVE HEALTHCARE
+            ${t('care.label', 'SAFE CARE GUIDES')}
           </div>
           <h1 class="text-h1" style="line-height: 1.15; margin-bottom: var(--space-xs);">
-            Safe Temporary Care & Relief
+            ${t('care.title', 'Home Care & Guidance')}
           </h1>
           <p class="text-base text-muted">
-            Clinically verified, low-risk supportive measures to help manage mild symptoms safely while arranging proper medical consultation.
+            ${t('care.subtitle', 'Clinically verified, low-risk supportive measures to help manage mild symptoms safely while arranging proper medical consultation.')}
           </p>
         </div>
 
