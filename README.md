@@ -7,6 +7,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **JeevanSetu** bridges the healthcare divide for rural and underserved communities in India. Designed for low bandwidth and intermittent connectivity, it provides instant AI symptom triage, verified life-saving emergency first-aid protocols, offline healthcare facility routing, and bilingual medicine reminders.
+> 
+> 📄 **Product Requirements Document (PRD)**: [JeevanSetu_PRD.docx](https://github.com/user-attachments/files/32094947/JeevanSetu_PRD.docx)
 
 ---
 
