@@ -28,6 +28,7 @@ import { AIService } from './services/aiService';
 import { HealthcareService } from './services/healthcareService';
 import { VoiceService, VoiceState } from './services/voiceService';
 import { StorageService } from './services/storageService';
+import { SOSService } from './services/sosService';
 import { CARE_TOPICS } from './data/care';
 import { HEALTH_GUIDES } from './data/healthGuides';
 import { FacilityType, AssessmentResult } from './types/health';
@@ -185,6 +186,17 @@ declare global {
     quickAddPreset: (name: string, dosage: string, timeSlot: 'morning' | 'afternoon' | 'night', time: string, mealInstruction: 'before_meal' | 'after_meal' | 'with_meal') => void;
     testReminderChime: () => void;
     enableReminderNotifications: () => Promise<void>;
+    startSosHoldTimer: () => void;
+    cancelSosHoldTimer: () => void;
+    handleSosInstantTrigger: () => void;
+    recordDialerOpened: (targetNumber: string) => void;
+    resolveEmergencyIncident: () => void;
+    cancelEmergencyIncident: () => void;
+    setSosManualLocality: (locality: string) => void;
+    applyCustomLocality: () => void;
+    toggleAddContactForm: () => void;
+    handleAddContactSubmit: (event: Event) => void;
+    handleDeleteContact: (id: string) => void;
   }
 }
 
@@ -455,6 +467,140 @@ window.clearAllAppData = () => {
     localStorage.clear();
     showToast('All local application data reset.', 'info');
     router.navigate('#/');
+  }
+};
+
+/* ══════════════════════════════════════════
+   SMART SOS EMERGENCY WORKFLOW HANDLERS
+══════════════════════════════════════════ */
+let sosHoldTimeout: any = null;
+let isSosHolding = false;
+
+window.startSosHoldTimer = () => {
+  isSosHolding = true;
+  const btnText = document.getElementById('sos-btn-text');
+  const progressHint = document.getElementById('sos-progress-hint');
+  if (btnText) btnText.innerText = '⏳ HOLD FOR 2 SECONDS...';
+  if (progressHint) progressHint.innerText = 'Activating in 2 seconds... Release immediately to cancel';
+
+  sosHoldTimeout = setTimeout(() => {
+    if (isSosHolding) {
+      window.handleSosInstantTrigger();
+    }
+  }, 2000);
+};
+
+window.cancelSosHoldTimer = () => {
+  isSosHolding = false;
+  if (sosHoldTimeout) {
+    clearTimeout(sosHoldTimeout);
+    sosHoldTimeout = null;
+  }
+  const btnText = document.getElementById('sos-btn-text');
+  const progressHint = document.getElementById('sos-progress-hint');
+  if (btnText) btnText.innerText = '🚨 PRESS OR HOLD 2S TO ACTIVATE SOS';
+  if (progressHint) progressHint.innerText = 'Press button or hold for 2 seconds to initiate emergency sequence';
+};
+
+window.handleSosInstantTrigger = async () => {
+  isSosHolding = false;
+  if (sosHoldTimeout) clearTimeout(sosHoldTimeout);
+
+  showToast('🚨 Smart SOS Sequence Activated!', 'error', 5000);
+  SOSService.createIncident('Acquiring location...');
+  
+  // Prompt location with graceful fallback
+  const loc = await SOSService.requestLocationWithFallback();
+  SOSService.setIncidentLocation(loc);
+  SOSService.updateIncidentStatus('alert_queued', 'Alert queued for delivery');
+
+  // Check alert gateway
+  setTimeout(() => {
+    SOSService.updateIncidentStatus('sent', 'Simulated alert delivered to trusted contacts (Demo Gateway)');
+    showToast('Alert notification queued for trusted contacts', 'info');
+    router.handleHashChange();
+  }, 1200);
+
+  router.handleHashChange();
+};
+
+window.recordDialerOpened = (targetNumber: string) => {
+  SOSService.updateIncidentStatus('call_opened', `Emergency phone dialer opened for ${targetNumber}`);
+  showToast(`Dialer opened for ${targetNumber}. Call in progress.`, 'info');
+};
+
+window.resolveEmergencyIncident = () => {
+  SOSService.resolveIncident();
+  showToast('Emergency incident safely marked as resolved.', 'success');
+  router.handleHashChange();
+};
+
+window.cancelEmergencyIncident = () => {
+  if (confirm('Mark this incident as a False Alarm / Cancelled?')) {
+    SOSService.cancelIncident('False alarm cancelled by user');
+    showToast('Incident marked as false alarm.', 'info');
+    router.handleHashChange();
+  }
+};
+
+window.setSosManualLocality = (locality: string) => {
+  SOSService.setIncidentLocation({
+    locality,
+    source: 'manual_fallback'
+  });
+  showToast(`Locality updated to: ${locality}`, 'success');
+  router.handleHashChange();
+};
+
+window.applyCustomLocality = () => {
+  const input = document.getElementById('custom-locality-input') as HTMLInputElement | null;
+  const val = input?.value?.trim();
+  if (!val) {
+    showToast('Please type your village or taluka name.', 'warning');
+    return;
+  }
+  window.setSosManualLocality(val);
+};
+
+window.toggleAddContactForm = () => {
+  const form = document.getElementById('add-contact-form');
+  if (form) {
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+};
+
+window.handleAddContactSubmit = (event: Event) => {
+  event.preventDefault();
+  const nameInput = document.getElementById('contact-name-input') as HTMLInputElement | null;
+  const phoneInput = document.getElementById('contact-phone-input') as HTMLInputElement | null;
+  const relInput = document.getElementById('contact-relation-input') as HTMLInputElement | null;
+
+  const name = nameInput?.value?.trim();
+  const phone = phoneInput?.value?.trim();
+  const relationship = relInput?.value?.trim() || 'Family';
+
+  if (!name || !phone) {
+    showToast('Please enter both contact name and phone number.', 'warning');
+    return;
+  }
+
+  SOSService.saveTrustedContact({
+    name,
+    phone,
+    relationship,
+    consentStatus: 'granted'
+  });
+
+  showToast(`Trusted contact ${name} added successfully!`, 'success');
+  window.toggleAddContactForm();
+  router.handleHashChange();
+};
+
+window.handleDeleteContact = (id: string) => {
+  if (confirm('Remove this trusted emergency contact?')) {
+    SOSService.deleteTrustedContact(id);
+    showToast('Contact removed.', 'info');
+    router.handleHashChange();
   }
 };
 
