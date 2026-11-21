@@ -47,8 +47,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/rohit2008-bit/hackathon.git
-cd hackathon
+git clone https://github.com/shyamchauhan-14/jeevansetu.git
+cd jeevansetu
 
 # Install dependencies
 npm install
@@ -78,31 +78,23 @@ npm run build
 
 ---
 
-## ☁️ Supabase Setup
+## ☁️ Supabase Setup & Migrations
 
-The `medicine_reminders` table schema:
+Database migrations and secure Row Level Security (RLS) policies are version-controlled in [`supabase/migrations/20261121000000_jeevansetu_core_schema.sql`](supabase/migrations/20261121000000_jeevansetu_core_schema.sql).
+
+All user health records, symptom logs, emergency contacts, and medicine reminders enforce strict owner-isolated RLS:
 ```sql
-CREATE TABLE IF NOT EXISTS public.medicine_reminders (
-    id TEXT PRIMARY KEY,
-    user_id TEXT DEFAULT 'default_user',
-    name TEXT NOT NULL,
-    dosage TEXT NOT NULL,
-    time_slot TEXT NOT NULL CHECK (time_slot IN ('morning', 'afternoon', 'night')),
-    time TEXT NOT NULL,
-    meal_instruction TEXT NOT NULL CHECK (meal_instruction IN ('before_meal', 'after_meal', 'with_meal')),
-    last_taken_date TEXT,
-    is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
 ALTER TABLE public.medicine_reminders ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public read medicine_reminders" ON public.medicine_reminders FOR SELECT USING (true);
-CREATE POLICY "Allow public insert medicine_reminders" ON public.medicine_reminders FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update medicine_reminders" ON public.medicine_reminders FOR UPDATE USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public delete medicine_reminders" ON public.medicine_reminders FOR DELETE USING (true);
+CREATE POLICY "Users can read own reminders"
+    ON public.medicine_reminders FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own reminders"
+    ON public.medicine_reminders FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
 ```
+See [`docs/DATABASE_AND_RLS.md`](docs/DATABASE_AND_RLS.md) for full schema definitions and role model.
 
 ---
 
