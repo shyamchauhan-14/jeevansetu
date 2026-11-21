@@ -197,6 +197,9 @@ declare global {
     toggleAddContactForm: () => void;
     handleAddContactSubmit: (event: Event) => void;
     handleDeleteContact: (id: string) => void;
+    openFacilityCorrection: (facilityId: string, facilityName: string) => void;
+    closeFacilityCorrection: () => void;
+    submitFacilityCorrection: (event: Event) => void;
   }
 }
 
@@ -602,6 +605,40 @@ window.handleDeleteContact = (id: string) => {
     showToast('Contact removed.', 'info');
     router.handleHashChange();
   }
+};
+
+window.openFacilityCorrection = (facilityId: string, facilityName: string) => {
+  const dialog = document.getElementById('correction-dialog');
+  const idInput = document.getElementById('correction-facility-id') as HTMLInputElement | null;
+  const titleEl = document.getElementById('correction-facility-title');
+  if (dialog && idInput && titleEl) {
+    idInput.value = facilityId;
+    titleEl.innerText = `Facility: ${facilityName}`;
+    dialog.style.display = 'block';
+    dialog.scrollIntoView({ behavior: 'smooth' });
+  }
+};
+
+window.closeFacilityCorrection = () => {
+  const dialog = document.getElementById('correction-dialog');
+  if (dialog) dialog.style.display = 'none';
+};
+
+window.submitFacilityCorrection = (event: Event) => {
+  event.preventDefault();
+  const idInput = document.getElementById('correction-facility-id') as HTMLInputElement | null;
+  const typeSelect = document.getElementById('correction-issue-type') as HTMLSelectElement | null;
+  const detailsInput = document.getElementById('correction-details') as HTMLInputElement | null;
+
+  const facilityId = idInput?.value || '';
+  const issueType = (typeSelect?.value || 'wrong_phone') as any;
+  const details = detailsInput?.value?.trim() || '';
+
+  const facility = HealthcareService.getFacilityById(facilityId);
+  HealthcareService.submitCorrectionReport(facilityId, facility?.name || 'Healthcare Facility', issueType, details);
+
+  showToast('Correction submitted! Thank you for keeping rural healthcare data verified.', 'success');
+  window.closeFacilityCorrection();
 };
 
 window.openDirections = (name: string, address: string) => {

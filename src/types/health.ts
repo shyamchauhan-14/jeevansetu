@@ -131,6 +131,19 @@ export interface HealthcareFacility {
   hasAmbulance: boolean;
   hasEmergencyBed: boolean;
   address: string;
+  source?: string;
+  verifiedDate?: string;
+  services?: string[];
+  isVerified?: boolean;
+}
+
+export interface FacilityCorrectionReport {
+  id: string;
+  facilityId: string;
+  facilityName: string;
+  issueType: 'wrong_phone' | 'closed' | 'address_incorrect' | 'services_changed';
+  details: string;
+  reportedAt: string;
 }
 
 export interface LanguageOption {
