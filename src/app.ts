@@ -200,6 +200,12 @@ declare global {
     openFacilityCorrection: (facilityId: string, facilityName: string) => void;
     closeFacilityCorrection: () => void;
     submitFacilityCorrection: (event: Event) => void;
+    setMedicineStatus: (id: string, status: 'taken' | 'skipped' | 'snoozed' | 'pending') => void;
+    handleExportHealthSummary: () => void;
+    handleDeleteAllUserData: () => void;
+    toggleAddRecordForm: () => void;
+    handleAddRecordSubmit: (event: Event) => void;
+    handleDeleteHealthRecord: (id: string) => void;
   }
 }
 
@@ -653,6 +659,82 @@ window.refreshGeolocation = () => {
 /* ══════════════════════════════════════════
    MEDICINE REMINDER HANDLERS & NOTIFICATIONS
 ══════════════════════════════════════════ */
+
+window.setMedicineStatus = (id: string, status: 'taken' | 'skipped' | 'snoozed' | 'pending') => {
+  StorageService.updateReminderStatus(id, status);
+  if (status === 'taken') {
+    playReminderChime();
+    showToast('Dose recorded as completed! शाबाश!', 'success');
+  } else if (status === 'skipped') {
+    showToast('Dose logged as skipped. (Remember to follow doctor instructions)', 'warning');
+  } else if (status === 'snoozed') {
+    showToast('Reminder snoozed for 15 minutes ⏰', 'info');
+  } else {
+    showToast('Dose marked as pending.', 'info');
+  }
+  router.handleHashChange();
+};
+
+window.handleExportHealthSummary = () => {
+  const summary = StorageService.exportHealthSummary();
+  const jsonStr = JSON.stringify(summary, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `JeevanSetu_Health_Summary_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Medical summary exported successfully! Portable for doctor visits.', 'success');
+};
+
+window.handleDeleteAllUserData = () => {
+  if (confirm('Are you sure you want to delete all your personal medical records and reminders from this device? This action cannot be undone.')) {
+    StorageService.deleteAllUserData();
+    showToast('All personal health data successfully deleted.', 'info');
+    router.handleHashChange();
+  }
+};
+
+window.toggleAddRecordForm = () => {
+  const form = document.getElementById('add-record-form');
+  if (form) {
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+};
+
+window.handleAddRecordSubmit = (event: Event) => {
+  event.preventDefault();
+  const titleInput = document.getElementById('record-title') as HTMLInputElement | null;
+  const typeSelect = document.getElementById('record-type') as HTMLSelectElement | null;
+
+  const title = titleInput?.value?.trim();
+  const recordType = (typeSelect?.value || 'condition') as any;
+
+  if (!title) {
+    showToast('Please enter an item title.', 'warning');
+    return;
+  }
+
+  StorageService.addHealthRecord({
+    recordType,
+    title,
+    content: {},
+    provenance: 'patient_entered'
+  });
+
+  showToast(`Added ${title} to health record!`, 'success');
+  window.toggleAddRecordForm();
+  router.handleHashChange();
+};
+
+window.handleDeleteHealthRecord = (id: string) => {
+  if (confirm('Remove this entry from your health record?')) {
+    StorageService.deleteHealthRecord(id);
+    showToast('Record entry removed.', 'info');
+    router.handleHashChange();
+  }
+};
 
 window.toggleMedicineTaken = (id: string) => {
   const isNowTaken = StorageService.toggleReminderTaken(id);

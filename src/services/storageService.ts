@@ -1,12 +1,14 @@
-import { UserProfile, AssessmentHistoryEntry, MedicineReminder } from '../types/health';
+import { UserProfile, AssessmentHistoryEntry, MedicineReminder, HealthRecord, ReminderStatus } from '../types/health';
 import { SupabaseService } from './supabaseClient';
+import { AuthService } from './authService';
 
 const STORAGE_KEYS = {
   PROFILE: 'jeevansetu_user_profile',
   HISTORY: 'jeevansetu_assessment_history',
   LANGUAGE: 'jeevansetu_selected_lang',
   SETTINGS: 'jeevansetu_app_settings',
-  REMINDERS: 'jeevansetu_medicine_reminders'
+  REMINDERS: 'jeevansetu_medicine_reminders',
+  HEALTH_RECORDS: 'jeevansetu_health_records'
 };
 
 const DEFAULT_REMINDERS: MedicineReminder[] = [
@@ -17,6 +19,7 @@ const DEFAULT_REMINDERS: MedicineReminder[] = [
     timeSlot: 'morning',
     time: '08:30',
     mealInstruction: 'after_meal',
+    status: 'pending',
     isActive: true
   },
   {
@@ -26,6 +29,7 @@ const DEFAULT_REMINDERS: MedicineReminder[] = [
     timeSlot: 'afternoon',
     time: '14:00',
     mealInstruction: 'with_meal',
+    status: 'pending',
     isActive: true
   },
   {
@@ -35,6 +39,7 @@ const DEFAULT_REMINDERS: MedicineReminder[] = [
     timeSlot: 'night',
     time: '20:30',
     mealInstruction: 'after_meal',
+    status: 'pending',
     isActive: true
   }
 ];
@@ -53,6 +58,27 @@ const DEFAULT_PROFILE: UserProfile = {
   currentMedications: 'Amlodipine 5mg OD'
 };
 
+const DEFAULT_HEALTH_RECORDS: HealthRecord[] = [
+  {
+    id: 'rec-1',
+    userId: 'guest_local_user',
+    recordType: 'allergy',
+    title: 'Severe Penicillin Allergy',
+    content: { reaction: 'Anaphylaxis / Hives', severe: true },
+    provenance: 'patient_entered',
+    createdAt: '2026-09-10T08:00:00Z'
+  },
+  {
+    id: 'rec-2',
+    userId: 'guest_local_user',
+    recordType: 'condition',
+    title: 'Hypertension (Stage 1)',
+    content: { diagnosedBy: 'PHC Khed Medical Officer', reading: '138/88 mmHg' },
+    provenance: 'clinician_verified',
+    createdAt: '2026-08-20T10:30:00Z'
+  }
+];
+
 const DEFAULT_HISTORY: AssessmentHistoryEntry[] = [
   {
     id: 'hist-1',
@@ -69,14 +95,6 @@ const DEFAULT_HISTORY: AssessmentHistoryEntry[] = [
     riskLevel: 'CRITICAL',
     headline: 'Possible Cardiac Distress — Emergency Care',
     actionTaken: 'Ambulance 108 summoned to CHC Manchar'
-  },
-  {
-    id: 'hist-3',
-    date: '14 Jul 2026, 09:00 AM',
-    symptoms: ['Persistent Vomiting', 'Abdominal Pain'],
-    riskLevel: 'MODERATE',
-    headline: 'Clinical Evaluation Advised Within 24h',
-    actionTaken: 'Visited PHC Khed for rehydration evaluation'
   }
 ];
 
@@ -141,7 +159,49 @@ export class StorageService {
     }
   }
 
-  /* ── MEDICINE REMINDERS & SUPABASE SYNC ── */
+  /* ── DIGITAL HEALTH RECORDS & PROVENANCE ── */
+
+  public static getHealthRecords(): HealthRecord[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.HEALTH_RECORDS);
+      return data ? JSON.parse(data) : DEFAULT_HEALTH_RECORDS;
+    } catch {
+      return DEFAULT_HEALTH_RECORDS;
+    }
+  }
+
+  public static addHealthRecord(record: Omit<HealthRecord, 'id' | 'createdAt' | 'userId'>): HealthRecord {
+    const user = AuthService.getCurrentUser();
+    const newRecord: HealthRecord = {
+      ...record,
+      id: 'rec-' + Date.now().toString(36),
+      userId: user.id,
+      createdAt: new Date().toISOString()
+    };
+
+    const current = this.getHealthRecords();
+    const updated = [newRecord, ...current];
+    try {
+      localStorage.setItem(STORAGE_KEYS.HEALTH_RECORDS, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+    return newRecord;
+  }
+
+  public static deleteHealthRecord(id: string): void {
+    const user = AuthService.getCurrentUser();
+    const current = this.getHealthRecords();
+    // Only delete if owner matches or local guest
+    const updated = current.filter((r) => r.id !== id || (r.userId !== user.id && !user.isGuest));
+    try {
+      localStorage.setItem(STORAGE_KEYS.HEALTH_RECORDS, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+  }
+
+  /* ── MEDICINE REMINDERS & STATES ── */
 
   public static getReminders(): MedicineReminder[] {
     try {
@@ -149,10 +209,7 @@ export class StorageService {
       if (data) {
         return JSON.parse(data);
       }
-      // Initialize with defaults if empty
       localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(DEFAULT_REMINDERS));
-      // Async background sync to Supabase for initial defaults
-      this.syncDefaultsToSupabase(DEFAULT_REMINDERS);
       return DEFAULT_REMINDERS;
     } catch {
       return DEFAULT_REMINDERS;
@@ -173,8 +230,6 @@ export class StorageService {
       }
 
       localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(updated));
-
-      // Async sync with Supabase
       SupabaseService.upsertReminder(reminder).catch(() => {});
     } catch {
       // ignore
@@ -186,28 +241,45 @@ export class StorageService {
       const current = this.getReminders();
       const updated = current.filter((r) => r.id !== id);
       localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(updated));
-
-      // Async sync with Supabase
       SupabaseService.deleteReminder(id).catch(() => {});
     } catch {
       // ignore
     }
   }
 
-  public static toggleReminderTaken(id: string): boolean {
+  public static updateReminderStatus(id: string, status: ReminderStatus): MedicineReminder | null {
     try {
       const current = this.getReminders();
       const reminder = current.find((r) => r.id === id);
-      if (!reminder) return false;
+      if (!reminder) return null;
 
       const todayStr = new Date().toISOString().split('T')[0];
-      const wasTakenToday = reminder.lastTakenDate === todayStr;
+      reminder.status = status;
+      if (status === 'taken') {
+        reminder.lastTakenDate = todayStr;
+      }
 
-      reminder.lastTakenDate = wasTakenToday ? undefined : todayStr;
       this.saveReminder(reminder);
-      return !wasTakenToday;
+      return reminder;
     } catch {
+      return null;
+    }
+  }
+
+  public static toggleReminderTaken(id: string): boolean {
+    const reminders = this.getReminders();
+    const reminder = reminders.find((r) => r.id === id);
+    if (!reminder) return false;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isTaken = reminder.status === 'taken' && reminder.lastTakenDate === todayStr;
+
+    if (isTaken) {
+      this.updateReminderStatus(id, 'pending');
       return false;
+    } else {
+      this.updateReminderStatus(id, 'taken');
+      return true;
     }
   }
 
@@ -224,10 +296,35 @@ export class StorageService {
     return this.getReminders();
   }
 
-  private static async syncDefaultsToSupabase(reminders: MedicineReminder[]): Promise<void> {
-    for (const rem of reminders) {
-      await SupabaseService.upsertReminder(rem);
-    }
+  /* ── DATA EXPORT & RIGHT-TO-BE-FORGOTTEN ── */
+
+  public static exportHealthSummary() {
+    const profile = this.getProfile();
+    const reminders = this.getReminders();
+    const records = this.getHealthRecords();
+    const history = this.getHistory();
+
+    return {
+      exportedAt: new Date().toISOString(),
+      disclaimer: 'Notice: This patient health summary is compiled from self-reported data and supportive triage records. It does not replace an official clinical health chart maintained by a healthcare provider.',
+      patientProfile: profile,
+      medicineSchedule: reminders.map((r) => ({
+        name: r.name,
+        dosage: r.dosage,
+        schedule: r.timeSlot,
+        time: r.time,
+        instructions: r.mealInstruction,
+        status: r.status || 'pending'
+      })),
+      verifiedHealthRecords: records,
+      triageHistory: history
+    };
+  }
+
+  public static deleteAllUserData(): void {
+    localStorage.removeItem(STORAGE_KEYS.PROFILE);
+    localStorage.removeItem(STORAGE_KEYS.REMINDERS);
+    localStorage.removeItem(STORAGE_KEYS.HEALTH_RECORDS);
+    localStorage.removeItem(STORAGE_KEYS.HISTORY);
   }
 }
-
