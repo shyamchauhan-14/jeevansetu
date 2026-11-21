@@ -24,6 +24,7 @@ import { renderRemindersPage } from './pages/Reminders';
 import { renderWorkerWorkspacePage } from './pages/WorkerWorkspace';
 import { renderDonorsPage } from './pages/Donors';
 import { renderCommunityTrendsPage } from './pages/CommunityTrends';
+import { renderAdminDashboardPage } from './pages/AdminDashboard';
 import { playReminderChime, requestNotificationPermission, sendBrowserNotification } from './utils/reminderAudio';
 
 // Services & Components
@@ -33,6 +34,8 @@ import { VoiceService, VoiceState } from './services/voiceService';
 import { StorageService } from './services/storageService';
 import { SOSService } from './services/sosService';
 import { CommunityService } from './services/communityService';
+import { OfflineSyncService } from './services/offlineSyncService';
+import { AuthService, UserRole } from './services/authService';
 import { CARE_TOPICS } from './data/care';
 import { HEALTH_GUIDES } from './data/healthGuides';
 import { FacilityType, AssessmentResult } from './types/health';
@@ -44,6 +47,7 @@ let currentTriageResult: AssessmentResult | null = null;
 let locatorActiveFilter: string = 'ALL';
 let locatorSearchQuery: string = '';
 let guideSearchQuery: string = '';
+let adminActiveTab: string = 'facilities';
 let selectedSymptomIds: Set<string> = new Set();
 let isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
@@ -153,6 +157,7 @@ router.register('/reminders', () => renderRemindersPage());
 router.register('/worker', () => renderWorkerWorkspacePage());
 router.register('/donors', () => renderDonorsPage());
 router.register('/trends', () => renderCommunityTrendsPage());
+router.register('/admin', () => renderAdminDashboardPage(adminActiveTab));
 
 router.setNotFound(() => renderNotFoundPage());
 
@@ -218,6 +223,13 @@ declare global {
     toggleDonorRegistrationForm: () => void;
     handleDonorRegistration: (event: Event) => void;
     handleRequestDonorContact: (id: string) => void;
+    handleSyncNow: () => Promise<void>;
+    handleWipeLocalCache: () => void;
+    setAdminTab: (tab: string) => void;
+    handleAdminToggleFacility: (id: string) => void;
+    handleAdminResolveCorrection: (reportId: string) => void;
+    handleAdminUpdateTrend: (trendId: string, status: 'unverified_signal' | 'validated' | 'closed') => void;
+    handleAdminSwitchRole: (role: UserRole) => void;
   }
 }
 
@@ -879,6 +891,68 @@ window.enableReminderNotifications = async () => {
     showToast('Notification permission was dismissed or blocked.', 'warning');
   }
 };
+
+window.handleSyncNow = async () => {
+  showToast('Starting background synchronization...', 'info');
+  const result = await OfflineSyncService.processSyncQueue();
+  if (result.conflictCount > 0) {
+    showToast(`Sync complete: ${result.syncedCount} synced, ${result.conflictCount} conflicts detected.`, 'warning', 6000);
+  } else if (result.failedCount > 0) {
+    showToast(`Sync finished: ${result.syncedCount} synced, ${result.failedCount} failed.`, 'error', 5000);
+  } else {
+    showToast(`Sync complete! ${result.syncedCount} items updated with cloud.`, 'success', 4000);
+  }
+  router.handleHashChange();
+};
+
+window.handleWipeLocalCache = () => {
+  const confirmed = window.confirm(
+    'Are you sure you want to wipe local offline cache and pending transactions on this shared device? This cannot be undone.'
+  );
+  if (confirmed) {
+    OfflineSyncService.clearLocalData();
+    showToast('Local offline cache and queue wiped successfully.', 'info');
+    router.handleHashChange();
+  }
+};
+
+window.setAdminTab = (tab: string) => {
+  adminActiveTab = tab;
+  router.handleHashChange();
+};
+
+window.handleAdminToggleFacility = (id: string) => {
+  const newStatus = HealthcareService.toggleFacilityVerification(id);
+  showToast(`Facility verification status set to: ${newStatus ? 'VERIFIED' : 'UNVERIFIED'}`, 'success');
+  router.handleHashChange();
+};
+
+window.handleAdminResolveCorrection = (reportId: string) => {
+  HealthcareService.resolveCorrectionReport(reportId);
+  showToast('Facility correction report marked reviewed & resolved.', 'success');
+  router.handleHashChange();
+};
+
+window.handleAdminUpdateTrend = (trendId: string, status: 'unverified_signal' | 'validated' | 'closed') => {
+  CommunityService.updateTrendStatus(trendId, status);
+  showToast(`Cluster status updated to: ${status.toUpperCase()}`, 'success');
+  router.handleHashChange();
+};
+
+window.handleAdminSwitchRole = (role: UserRole) => {
+  AuthService.setRoleForTesting(role);
+  showToast(`Switched active role to: ${role.toUpperCase()}`, 'info');
+  router.handleHashChange();
+};
+
+// Register Service Worker for offline-first caching
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Non-fatal in dev or test environments
+    });
+  });
+}
 
 // Check for pending doses every minute
 setInterval(() => {
