@@ -3,6 +3,9 @@ node_modules
 dist
 dist-ssr
 
+# Supabase temp
+supabase/.temp/
+
 # Environment Variables
 .env
 .env.*
