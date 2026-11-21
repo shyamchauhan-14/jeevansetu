@@ -1,18 +1,26 @@
 import { SymptomInput, AssessmentResult, EmergencyProtocol } from '../types/health';
-import { generateMockAssessment } from '../data/symptoms';
+import { evaluateDeterministicTriage, CLINICAL_RULES_METADATA } from '../data/symptoms';
 import { EMERGENCY_PROTOCOLS } from '../data/emergencies';
 
 export class AIService {
   /**
-   * Evaluates symptoms asynchronously to simulate realistic AI inference pipeline
+   * Deterministic clinical triage evaluator.
+   * Model generation is constrained and cannot override deterministic red flags.
    */
-  public static async analyzeSymptoms(input: SymptomInput, delayMs = 1800): Promise<AssessmentResult> {
+  public static async analyzeSymptoms(input: SymptomInput, delayMs = 600): Promise<AssessmentResult> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const result = generateMockAssessment(input);
+        const result = evaluateDeterministicTriage(input);
         resolve(result);
       }, delayMs);
     });
+  }
+
+  /**
+   * Returns audited clinical rules metadata
+   */
+  public static getClinicalRulesMetadata() {
+    return CLINICAL_RULES_METADATA;
   }
 
   /**

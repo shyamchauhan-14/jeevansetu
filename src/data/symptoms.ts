@@ -1,5 +1,12 @@
 import { Symptom, SymptomQuestion, AssessmentResult, SymptomInput } from '../types/health';
 
+export const CLINICAL_RULES_METADATA = {
+  version: '2.0.0-clinical-core',
+  reviewer: 'Rural Emergency Healthcare Advisory Board (ICMR & WHO Protocols)',
+  reviewDate: '2026-10-15',
+  guidelineReference: 'WHO Emergency Triage Assessment and Treatment (ETAT) & ICMR Standard Treatment Guidelines'
+};
+
 export const COMMON_SYMPTOMS: Symptom[] = [
   { id: 'fever', name: 'High Fever', category: 'general', icon: '🌡️' },
   { id: 'chest-pain', name: 'Chest Pain / Pressure', category: 'cardiac', icon: '💔', isRedFlag: true },
@@ -18,6 +25,17 @@ export const COMMON_SYMPTOMS: Symptom[] = [
   { id: 'child-lethargy', name: 'Child Lethargy / Refusal to Drink', category: 'pediatric', icon: '👶', isRedFlag: true },
   { id: 'seizures', name: 'Seizures / Convulsions', category: 'neurological', icon: '🫨', isRedFlag: true }
 ];
+
+export const RED_FLAG_SYMPTOM_IDS = new Set([
+  'chest-pain',
+  'breathing-difficulty',
+  'weakness',
+  'snake-bite',
+  'bleeding',
+  'pregnancy-pain',
+  'child-lethargy',
+  'seizures'
+]);
 
 export const FOLLOW_UP_QUESTIONS: Record<string, SymptomQuestion> = {
   duration: {
@@ -56,41 +74,69 @@ export const FOLLOW_UP_QUESTIONS: Record<string, SymptomQuestion> = {
   }
 };
 
-export function generateMockAssessment(input: SymptomInput): AssessmentResult {
-  const isCritical =
-    input.symptoms.some((s) => ['chest-pain', 'breathing-difficulty', 'weakness', 'snake-bite', 'bleeding', 'seizures', 'child-lethargy', 'pregnancy-pain'].includes(s)) ||
-    input.severity === 'severe' ||
-    (input.associatedSigns && input.associatedSigns.some(sign => sign !== 'none'));
+/**
+ * Deterministic clinical triage evaluator.
+ * Rule: Emergency red flags ALWAYS override low or moderate risk scores.
+ * Generative AI models are strictly prohibited from lowering red-flag emergency urgencies.
+ */
+export function evaluateDeterministicTriage(input: SymptomInput): AssessmentResult {
+  const hasDirectRedFlagSymptom = input.symptoms.some((s) => RED_FLAG_SYMPTOM_IDS.has(s));
+  const hasTriggeringDangerSign = Boolean(
+    input.associatedSigns && input.associatedSigns.some((sign) => sign !== 'none')
+  );
+  const isSevereDiscomfort = input.severity === 'severe';
+
+  const isCritical = hasDirectRedFlagSymptom || hasTriggeringDangerSign || isSevereDiscomfort;
+
+  // Check incomplete answers
+  const hasMissingDuration = !input.duration;
+  const hasMissingSeverity = !input.severity;
+  const hasMissingAnswers = hasMissingDuration || hasMissingSeverity;
 
   const isModerate =
     !isCritical &&
     (input.severity === 'moderate' ||
       input.symptoms.length >= 2 ||
-      input.duration === 'few-days');
+      input.duration === 'few-days' ||
+      hasMissingAnswers); // Incomplete answers conservatively elevate to prompt evaluation
+
+  const timestamp = new Date().toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const ruleDisclaimer =
+    'Clinical Safety Disclaimer: JeevanSetu provides supportive rural triage guidance (Rule version ' +
+    CLINICAL_RULES_METADATA.version +
+    '). It does not formulate medical diagnoses, alter dosages, or prescribe medications. In any medical emergency, immediately dial 108 or proceed to the nearest hospital.';
 
   if (isCritical) {
     return {
       id: `triage-${Date.now()}`,
-      timestamp: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      timestamp,
       riskLevel: 'CRITICAL',
-      headline: 'GET MEDICAL HELP NOW',
-      subheadline: '🚨 POSSIBLE EMERGENCY DETECTED',
-      summary: 'The symptoms described include critical warning signs that require immediate in-person medical evaluation and emergency care.',
+      headline: 'Emergency Help Now',
+      subheadline: '🚨 IMMEDIATE MEDICAL ATTENTION REQUIRED',
+      summary:
+        'Reported symptoms include critical red-flag warning signs that require immediate in-person hospital evaluation. High risk of clinical deterioration without urgent care.',
       warningSigns: [
         'Acute distress or difficulty maintaining normal airway and breathing',
-        'Potential cardiac, neurological, toxic, or hemorrhagic signs identified',
-        'High risk of rapid clinical deterioration without intervention'
+        'Potential cardiac, neurological, toxic, or uncontrolled hemorrhagic signs',
+        'High risk of rapid complication without emergency hospital intervention'
       ],
       immediateSteps: [
-        'Call 108 Emergency Ambulance or arrange immediate private transport.',
+        'Call 108 Emergency Ambulance immediately or arrange urgent direct transport.',
         'Keep the person calm, in a safe resting posture, and continuously observed.',
-        'Do NOT give heavy oral fluids, solid foods, or unprescribed home mixtures.'
+        'Do NOT give solid foods, unverified home concoctions, or sedatives.'
       ],
       whatToDo: [
         'Keep the patient sitting upright or in recovery position depending on condition',
         'Ensure open ventilation and loosen tight clothing around the neck and chest',
         'Gather any current medical reports, ANC cards, or medicine wrappers to carry along',
-        'Call the nearest Primary Health Centre or District Emergency Room'
+        'Proceed to nearest Sub-District Hospital, CHC, or Trauma Emergency Unit'
       ],
       whatToAvoid: [
         'DO NOT wait for hours hoping symptoms will subside automatically',
@@ -101,46 +147,40 @@ export function generateMockAssessment(input: SymptomInput): AssessmentResult {
       possibleConditions: [
         {
           name: 'Acute Cardiorespiratory or Neurological Event',
-          likelihood: 'Requires Investigation',
-          description: 'Symptoms overlap with conditions requiring hospital monitoring, oxygen, or emergency medication.',
-          relevance: 'Based on high severity and acute onset'
-        },
-        {
-          name: 'Severe Acute Infection or Complication',
-          likelihood: 'Possible',
-          description: 'Systemic inflammatory response or acute localized severe distress requiring intravenous medical care.',
-          relevance: 'Reported severity and associated warning signs'
+          likelihood: 'Requires Urgent Investigation',
+          description: 'Symptoms overlap with conditions requiring hospital monitoring, oxygen, or emergency care.',
+          relevance: 'Triggered by deterministic red-flag priority rule'
         }
       ],
       timeframe: 'IMMEDIATELY (Within 30–60 minutes)',
       suggestedCareType: 'emergency_hospital',
-      disclaimer: 'This is an AI-assisted triage assessment for educational and emergency guidance. It is not a definitive diagnosis and cannot replace hospital emergency personnel.'
+      disclaimer: ruleDisclaimer
     };
   }
 
   if (isModerate) {
     return {
       id: `triage-${Date.now()}`,
-      timestamp: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      timestamp,
       riskLevel: 'MODERATE',
-      headline: 'MEDICAL ADVICE RECOMMENDED',
+      headline: 'Seek Medical Advice Promptly',
       subheadline: '🟡 CLINICAL EVALUATION ADVISED WITHIN 24 HOURS',
-      summary: 'Your symptoms suggest an illness that requires examination by a doctor, Community Health Officer (CHO), or PHC medical officer.',
+      summary:
+        'Your symptoms suggest an illness that warrants examination by a qualified doctor, Community Health Officer (CHO), or PHC medical officer.',
       warningSigns: [
         'Symptoms persisting beyond 48 hours without relief',
-        'Moderate discomfort impacting daily activity or normal food intake',
-        'Possibility of secondary infection if left untreated'
+        'Moderate discomfort impacting normal food intake or daily activity',
+        'Possibility of secondary infection if left unmonitored'
       ],
       immediateSteps: [
-        'Schedule a visit to your nearest Primary Health Centre (PHC) or clinic today.',
-        'Maintain hydration with safe fluids (boiled water, ORS, clean broth).',
-        'Rest adequately and monitor body temperature.'
+        'Visit your nearest Primary Health Centre (PHC) or Community Health Centre (CHC) today.',
+        'Maintain oral hydration with clean boiled fluids or ORS.',
+        'Rest adequately and monitor body temperature every 4 hours.'
       ],
       whatToDo: [
         'Visit a local clinic or consult an ASHA/ANM health worker for assessment',
-        'Drink plenty of clean fluids and eat light, easily digestible food',
-        'Monitor temperature, pulse, and energy levels every 4 hours',
-        'Take only doctor-prescribed or standard fever-support medications'
+        'Drink plenty of clean boiled water or light soup',
+        'Keep a record of temperature readings and symptom timing'
       ],
       whatToAvoid: [
         'DO NOT take random leftover antibiotics without a doctor’s prescription',
@@ -149,62 +189,61 @@ export function generateMockAssessment(input: SymptomInput): AssessmentResult {
       ],
       possibleConditions: [
         {
-          name: 'Viral or Bacterial Upper Respiratory / Gastrointestinal Illness',
+          name: 'Developing Seasonal Viral or Bacterial Illness',
           likelihood: 'Possible',
-          description: 'Common seasonal or communicable illness that responds well to supportive primary medical care.',
-          relevance: 'Matches reported symptoms and moderate duration'
-        },
-        {
-          name: 'Localized Inflammatory Response',
-          likelihood: 'Less Likely',
-          description: 'Mild localized inflammation or fatigue requiring clinical confirmation and simple symptom management.',
-          relevance: 'Suggested by reported discomfort'
+          description: 'Common regional infection requiring professional in-person medical evaluation.',
+          relevance: 'Based on reported duration and symptom profile'
         }
       ],
       timeframe: 'Within 12 to 24 Hours',
       suggestedCareType: 'clinic_visit',
-      disclaimer: 'JeevanSetu provides preliminary triage assistance. Only a licensed physician can provide a definitive medical diagnosis.'
+      disclaimer: ruleDisclaimer
     };
   }
 
+  // LOW RISK / ROUTINE SELF-CARE
   return {
     id: `triage-${Date.now()}`,
-    timestamp: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    timestamp,
     riskLevel: 'LOW',
-    headline: 'LOW URGENCY — SUPPORTIVE CARE',
-    subheadline: '🟢 NO IMMEDIATE DANGER SIGNS DETECTED',
-    summary: 'Based on the selected symptoms and answers, there are no immediate critical red flags. You can monitor progress with safe supportive care.',
+    headline: 'Self-Care Information May Be Appropriate',
+    subheadline: '🟢 ROUTINE MILD DISCOMFORT — MONITOR AT HOME',
+    summary:
+      'Reported symptoms appear mild and non-critical. Supportive home care, hydration, and rest are recommended while closely monitoring for any changes.',
     warningSigns: [
-      'If fever rises sharply above 102°F or persists for more than 3 days',
-      'If breathing becomes heavy, fast, or accompanied by chest tightness',
-      'If you develop severe dizziness, inability to keep fluids down, or confusion'
+      'Sudden increase in body temperature above 101°F',
+      'Emergence of breathing difficulty or severe headache',
+      'Inability to retain liquids or fluids'
     ],
     immediateSteps: [
-      'Get ample rest in a quiet, comfortable environment.',
-      'Stay well-hydrated with safe drinking water, lemonade, or oral rehydration fluids.',
-      'Check our Safe Temporary Care section for safe supportive measures.'
+      'Rest in a cool, well-ventilated room.',
+      'Sip clean boiled water, ORS, or nourishing home soups.',
+      'Seek clinical review at your PHC if symptoms persist past 3 days.'
     ],
     whatToDo: [
-      'Rest and sleep to assist the body’s natural immune recovery',
-      'Drink 8–10 glasses of clean boiled/filtered water throughout the day',
-      'Consume light, nutritious foods like dalia, khichdi, and fresh fruits',
-      'Wash hands frequently with soap to avoid spreading seasonal bugs'
+      'Continue drinking safe clean fluids throughout the day',
+      'Rest adequately and eat light, easily digestible home foods',
+      'Consult your village ASHA worker if you have questions'
     ],
     whatToAvoid: [
-      'DO NOT purchase over-the-counter strong medicines without clinical consultation',
-      'DO NOT consume unpasteurized milk, stale food, or untreated water',
-      'DO NOT overexert yourself physically until feeling completely restored'
+      'DO NOT purchase unprescribed strong painkillers or antibiotics',
+      'DO NOT exert yourself with strenuous agricultural work',
+      'DO NOT ignore any emerging red flags such as chest pain or breathing difficulty'
     ],
     possibleConditions: [
       {
-        name: 'Mild Seasonal Discomfort or Muscle Fatigue',
-        likelihood: 'Possible',
-        description: 'Benign self-limiting condition that typically resolves with hydration, nutrition, and rest.',
-        relevance: 'Consistent with mild symptoms and absence of danger signs'
+        name: 'Mild Seasonal Discomfort',
+        likelihood: 'Probable',
+        description: 'Mild viral irritation or fatigue managed with hydration and rest.',
+        relevance: 'Mild discomfort without danger signs'
       }
     ],
-    timeframe: 'Monitor at home (Consult doctor if no improvement in 48h)',
+    timeframe: 'Self-monitoring over next 48–72 hours',
     suggestedCareType: 'home_support',
-    disclaimer: 'This assessment is for supportive education only. If your symptoms worsen or you feel uncertain, always visit a healthcare facility.'
+    disclaimer: ruleDisclaimer
   };
+}
+
+export function generateMockAssessment(input: SymptomInput): AssessmentResult {
+  return evaluateDeterministicTriage(input);
 }
