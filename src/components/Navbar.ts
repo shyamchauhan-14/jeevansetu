@@ -77,6 +77,14 @@ export function renderNavbar(currentPath: string): string {
         ${mobileNavItems}
         <div class="divider divider--light"></div>
         <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+          <a href="#/worker" class="btn btn--outline btn--sm" onclick="window.closeMobileMenu()">👩‍⚕️ ASHA Workspace</a>
+          <a href="#/donors" class="btn btn--outline btn--sm" onclick="window.closeMobileMenu()">🩸 Blood Donors</a>
+          <a href="#/trends" class="btn btn--outline btn--sm" onclick="window.closeMobileMenu()">📈 Health Trends</a>
+          <a href="#/offline" class="btn btn--outline btn--sm" onclick="window.closeMobileMenu()">📶 Offline Hub</a>
+          <a href="#/admin" class="btn btn--primary btn--sm" onclick="window.closeMobileMenu()">🛡️ Admin Console</a>
+        </div>
+        <div class="divider divider--light"></div>
+        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
           <a href="#/language" class="btn btn--outline btn--sm" onclick="window.closeMobileMenu()">${I18nService.t('nav.allLanguages', '🌐 All Languages')}</a>
           <a href="#/profile" class="btn btn--ghost btn--sm" onclick="window.closeMobileMenu()">${I18nService.t('nav.profile', '👤 Profile')}</a>
           <a href="#/history" class="btn btn--ghost btn--sm" onclick="window.closeMobileMenu()">${I18nService.t('nav.history', '📋 History')}</a>

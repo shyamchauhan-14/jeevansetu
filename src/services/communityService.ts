@@ -176,4 +176,13 @@ export class CommunityService {
       return DEFAULT_TRENDS;
     }
   }
+
+  public static updateTrendStatus(trendId: string, status: 'unverified_signal' | 'validated' | 'closed'): boolean {
+    const trends = this.getHealthTrends();
+    const trend = trends.find((t) => t.id === trendId);
+    if (!trend) return false;
+    trend.reviewedStatus = status;
+    localStorage.setItem(STORAGE_KEYS.TRENDS, JSON.stringify(trends));
+    return true;
+  }
 }

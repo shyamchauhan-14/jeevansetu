@@ -87,6 +87,20 @@ export class AuthService {
     return this.currentUser;
   }
 
+  public static canAccessAdmin(user: AuthUser = this.getCurrentUser()): boolean {
+    return user.role === 'administrator' || user.role === 'clinician_reviewer';
+  }
+
+  public static setRoleForTesting(role: UserRole): void {
+    if (this.currentUser) {
+      this.currentUser.role = role;
+    } else {
+      this.currentUser = { ...LOCAL_GUEST_USER, role };
+    }
+    this.cacheAuthUser(this.currentUser);
+    this.notifyListeners(this.currentUser);
+  }
+
   public static async signIn(email: string, password: string): Promise<{ success: boolean; error?: string }> {
     if (!isSupabaseConfigured || !supabase) {
       return { success: false, error: 'Supabase is not configured. Running in offline/guest mode.' };

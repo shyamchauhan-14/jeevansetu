@@ -35,12 +35,13 @@ export function renderFooter(): string {
           <div>
             <h4 class="footer__title">Tools & AI</h4>
             <div class="footer__links">
+              <a href="#/worker">👩‍⚕️ ASHA Workspace</a>
+              <a href="#/donors">🩸 Blood Donors</a>
+              <a href="#/trends">📈 Health Trends</a>
+              <a href="#/reminders">💊 Medicine Reminders</a>
               <a href="#/voice">🎙️ ${I18nService.t('quick.voiceTitle', 'Voice Assistant')}</a>
-              <a href="#/language">🌐 ${I18nService.t('nav.allLanguages', 'Regional Languages')}</a>
-              <a href="#/profile">👤 ${I18nService.t('nav.profile', 'Medical Profile')}</a>
-              <a href="#/history">📋 ${I18nService.t('nav.history', 'Triage History')}</a>
-              <a href="#/settings">⚙️ Settings</a>
-              <a href="#/offline">📶 Offline Guides</a>
+              <a href="#/offline">📶 Offline Directory</a>
+              <a href="#/admin">🛡️ Governance & Audit</a>
             </div>
           </div>
 
