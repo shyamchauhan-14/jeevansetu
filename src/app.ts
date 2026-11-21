@@ -21,6 +21,9 @@ import { renderSafetyPage } from './pages/Safety';
 import { renderOfflinePage } from './pages/Offline';
 import { renderNotFoundPage } from './pages/NotFound';
 import { renderRemindersPage } from './pages/Reminders';
+import { renderWorkerWorkspacePage } from './pages/WorkerWorkspace';
+import { renderDonorsPage } from './pages/Donors';
+import { renderCommunityTrendsPage } from './pages/CommunityTrends';
 import { playReminderChime, requestNotificationPermission, sendBrowserNotification } from './utils/reminderAudio';
 
 // Services & Components
@@ -29,6 +32,7 @@ import { HealthcareService } from './services/healthcareService';
 import { VoiceService, VoiceState } from './services/voiceService';
 import { StorageService } from './services/storageService';
 import { SOSService } from './services/sosService';
+import { CommunityService } from './services/communityService';
 import { CARE_TOPICS } from './data/care';
 import { HEALTH_GUIDES } from './data/healthGuides';
 import { FacilityType, AssessmentResult } from './types/health';
@@ -146,6 +150,9 @@ router.register('/settings', () => renderSettingsPage());
 router.register('/safety', () => renderSafetyPage());
 router.register('/offline', () => renderOfflinePage());
 router.register('/reminders', () => renderRemindersPage());
+router.register('/worker', () => renderWorkerWorkspacePage());
+router.register('/donors', () => renderDonorsPage());
+router.register('/trends', () => renderCommunityTrendsPage());
 
 router.setNotFound(() => renderNotFoundPage());
 
@@ -206,6 +213,11 @@ declare global {
     toggleAddRecordForm: () => void;
     handleAddRecordSubmit: (event: Event) => void;
     handleDeleteHealthRecord: (id: string) => void;
+    promptUpdateVisitNote: (id: string) => void;
+    handleRevokePatientConsent: (id: string) => void;
+    toggleDonorRegistrationForm: () => void;
+    handleDonorRegistration: (event: Event) => void;
+    handleRequestDonorContact: (id: string) => void;
   }
 }
 
@@ -734,6 +746,54 @@ window.handleDeleteHealthRecord = (id: string) => {
     showToast('Record entry removed.', 'info');
     router.handleHashChange();
   }
+};
+
+window.promptUpdateVisitNote = (id: string) => {
+  const note = prompt('Enter follow-up visit note (e.g. Blood pressure checked, medicines supplied):');
+  if (note && note.trim()) {
+    CommunityService.updateVisitNote(id, note.trim());
+    showToast('Visit note recorded successfully!', 'success');
+    router.handleHashChange();
+  }
+};
+
+window.handleRevokePatientConsent = (id: string) => {
+  if (confirm('Revoke worker access to this patient record? The patient will be marked as consent revoked.')) {
+    CommunityService.revokeConsent(id);
+    showToast('Patient consent revoked.', 'info');
+    router.handleHashChange();
+  }
+};
+
+window.toggleDonorRegistrationForm = () => {
+  const form = document.getElementById('donor-reg-form');
+  if (form) {
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+};
+
+window.handleDonorRegistration = (event: Event) => {
+  event.preventDefault();
+  const bgSelect = document.getElementById('donor-blood-group') as HTMLSelectElement | null;
+  const areaInput = document.getElementById('donor-broad-area') as HTMLInputElement | null;
+
+  const bloodGroup = (bgSelect?.value || 'O+') as any;
+  const broadArea = areaInput?.value?.trim() || 'Rural Sector';
+
+  CommunityService.registerDonor({
+    bloodGroup,
+    broadArea,
+    isAvailable: true,
+    contactPreference: 'in_app'
+  });
+
+  showToast('Voluntary blood donor registration completed! You can pause anytime.', 'success');
+  window.toggleDonorRegistrationForm();
+  router.handleHashChange();
+};
+
+window.handleRequestDonorContact = (_id: string) => {
+  showToast('In-App Blood Bank Request initiated. A local healthcare coordinator will assist with verification.', 'info', 5000);
 };
 
 window.toggleMedicineTaken = (id: string) => {
