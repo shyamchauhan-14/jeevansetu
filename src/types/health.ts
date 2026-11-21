@@ -156,6 +156,7 @@ export interface UserProfile {
 
 export type TimeSlot = 'morning' | 'afternoon' | 'night';
 export type MealInstruction = 'before_meal' | 'after_meal' | 'with_meal';
+export type ReminderStatus = 'pending' | 'taken' | 'skipped' | 'snoozed';
 
 export interface MedicineReminder {
   id: string;
@@ -165,8 +166,88 @@ export interface MedicineReminder {
   timeSlot: TimeSlot;
   time: string; // "HH:MM" e.g., "08:00"
   mealInstruction: MealInstruction;
+  status?: ReminderStatus;
   lastTakenDate?: string; // YYYY-MM-DD
   isActive: boolean;
   createdAt?: string;
 }
+
+export type EmergencyIncidentStatus = 
+  | 'not_started' 
+  | 'preparing' 
+  | 'call_opened' 
+  | 'alert_queued' 
+  | 'sent' 
+  | 'failed' 
+  | 'resolved' 
+  | 'cancelled';
+
+export interface EmergencyContact {
+  id: string;
+  userId: string;
+  name: string;
+  phone: string;
+  relationship: string;
+  consentStatus: 'pending' | 'granted' | 'revoked';
+  createdAt?: string;
+}
+
+export interface EmergencyIncident {
+  id: string;
+  userId?: string;
+  status: EmergencyIncidentStatus;
+  locality?: string;
+  latitude?: number;
+  longitude?: number;
+  emergencyType: string;
+  alertStatus: string;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export type RecordProvenance = 'patient_entered' | 'worker_entered' | 'clinician_verified' | 'provider_imported';
+
+export interface HealthRecord {
+  id: string;
+  userId: string;
+  recordType: 'allergy' | 'condition' | 'medication' | 'visit_note' | 'assessment_summary';
+  title: string;
+  content: Record<string, any>;
+  provenance: RecordProvenance;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface WorkerAssignment {
+  id: string;
+  workerUserId: string;
+  patientUserId: string;
+  patientName: string;
+  consentGranted: boolean;
+  status: 'active' | 'revoked' | 'completed';
+  lastVisitDate?: string;
+  notes?: string;
+}
+
+export interface BloodDonorProfile {
+  id: string;
+  userId: string;
+  bloodGroup: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
+  broadArea: string;
+  isAvailable: boolean;
+  contactPreference: 'in_app' | 'masked_phone';
+  lastDonationDate?: string;
+}
+
+export interface CommunityHealthTrend {
+  id: string;
+  areaCode: string;
+  period: string;
+  category: string;
+  countBucket: string; // e.g. "5-10 cases" to suppress small numbers and avoid re-identification
+  reviewedStatus: 'unverified_signal' | 'validated' | 'closed';
+  dataSource: string;
+  limitations: string;
+}
+
 
