@@ -171,6 +171,7 @@ declare global {
     toggleVoiceRecording: () => void;
     clearVoiceTranscript: () => void;
     submitVoiceTranscript: () => void;
+    handleManualVoiceText: (text: string) => void;
     handleProfileSave: (event: Event) => void;
     viewHistoryItem: (id: string) => void;
     clearTriageHistory: () => void;
@@ -364,8 +365,22 @@ window.clearVoiceTranscript = () => {
   voiceTranscriptBuffer = '';
   const outputEl = document.getElementById('voice-transcript-output');
   const actionsEl = document.getElementById('voice-actions');
+  const manualInput = document.getElementById('voice-manual-input') as HTMLTextAreaElement | null;
+  if (manualInput) manualInput.value = '';
   if (outputEl) outputEl.innerHTML = '<em>Your spoken words will appear here in real time...</em>';
   if (actionsEl) actionsEl.style.display = 'none';
+};
+
+window.handleManualVoiceText = (text: string) => {
+  voiceTranscriptBuffer = text;
+  const outputEl = document.getElementById('voice-transcript-output');
+  const actionsEl = document.getElementById('voice-actions');
+  if (outputEl && text.trim()) {
+    outputEl.innerHTML = `<span style="color: var(--color-black); font-weight: 600;">"${text}"</span>`;
+  }
+  if (actionsEl) {
+    actionsEl.style.display = text.trim() ? 'flex' : 'none';
+  }
 };
 
 window.submitVoiceTranscript = () => {

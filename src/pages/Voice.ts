@@ -1,4 +1,9 @@
+import { VoiceService } from '../services/voiceService';
+import { I18nService } from '../services/i18nService';
+
 export function renderVoicePage(): string {
+  const isVoiceSupported = VoiceService.isSupported();
+
   return `
     <div class="page-content">
       <div class="container" style="padding-top: var(--space-lg); padding-bottom: var(--space-3xl); max-width: 760px; text-align: center;">
@@ -7,15 +12,36 @@ export function renderVoicePage(): string {
         <div style="margin-bottom: var(--space-xl);">
           <div class="badge badge--green" style="margin-bottom: var(--space-sm);">
             <span class="badge-dot badge-dot--pulse"></span>
-            VOICE-FIRST ASSISTANT
+            ${I18nService.t('home.voiceAssistant', 'VOICE-FIRST ASSISTANT')}
           </div>
           <h1 class="text-h1" style="line-height: 1.15; margin-bottom: var(--space-xs);">
             Tell Us What's Happening
           </h1>
           <p class="text-base text-muted">
-            Speak naturally in Hindi, Marathi, Gujarati, English, or your regional language. JeevanSetu will listen and guide you step by step.
+            Speak naturally in Hindi, Gujarati, or English. JeevanSetu will listen and guide you step by step.
           </p>
         </div>
+
+        ${
+          !isVoiceSupported
+            ? `
+          <!-- Browser Unsupported Fallback Banner -->
+          <div class="card card--orange" style="margin-bottom: var(--space-xl); border-radius: var(--radius-xl); text-align: left; padding: var(--space-lg);">
+            <div style="display: flex; gap: 14px; align-items: flex-start;">
+              <span style="font-size: 2rem;">🎙️⚠️</span>
+              <div>
+                <h3 style="font-size: var(--text-base); font-weight: var(--font-weight-bold); color: var(--color-warning-dark);">
+                  Voice Recognition Not Supported in This Browser
+                </h3>
+                <p class="text-sm text-body" style="margin-top: 4px; line-height: var(--leading-normal);">
+                  Your current browser does not support live speech recognition. You can easily type your symptoms in the box below instead.
+                </p>
+              </div>
+            </div>
+          </div>
+        `
+            : ''
+        }
 
         <!-- Central Microphone Voice Orb Bento Card -->
         <div class="card card--paper" style="border-radius: var(--radius-2xl); padding: var(--space-2xl) var(--space-lg); margin-bottom: var(--space-xl); display: flex; flex-direction: column; align-items: center; justify-content: center;">
@@ -27,6 +53,7 @@ export function renderVoicePage(): string {
               id="main-voice-button" 
               onclick="window.toggleVoiceRecording()"
               aria-label="Toggle Voice Assistant Recording"
+              ${!isVoiceSupported ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
             >
               <span id="voice-icon">🎙️</span>
             </button>
@@ -41,43 +68,56 @@ export function renderVoicePage(): string {
           </div>
 
           <div id="voice-status-text" style="font-size: var(--text-h5); font-weight: var(--font-weight-bold); color: var(--color-text-main); margin-top: 4px;">
-            Tap microphone to speak
+            ${isVoiceSupported ? 'Tap microphone to speak' : 'Microphone unavailable — Use typing below'}
           </div>
 
           <div id="voice-subtext" class="text-xs text-muted" style="margin-top: 4px;">
-            Supported in Chrome, Edge, Safari, and mobile browsers
+            Supported in modern Chrome, Edge, Safari, and Android mobile browsers
           </div>
         </div>
 
-        <!-- Live Transcript Bento Card -->
+        <!-- Live Transcript / Text Fallback Bento Card -->
         <div class="card card--paper" style="text-align: left; margin-bottom: var(--space-xl); border-radius: var(--radius-xl);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-sm);">
-            <div class="section-label" style="margin-bottom: 0;">SPOKEN TRANSCRIPT</div>
+            <div class="section-label" style="margin-bottom: 0;">SPOKEN OR TYPED SYMPTOMS</div>
             <span class="badge badge--paper" id="voice-state-badge">IDLE</span>
           </div>
 
           <div 
             id="voice-transcript-output" 
-            style="min-height: 70px; font-size: var(--text-base); line-height: var(--leading-relaxed); color: var(--color-text-main);"
+            style="min-height: 70px; font-size: var(--text-base); line-height: var(--leading-relaxed); color: var(--color-text-main); margin-bottom: var(--space-md);"
           >
             <em class="text-muted">Your spoken words will appear here in real time...</em>
           </div>
 
-          <div id="voice-actions" style="display: none; margin-top: var(--space-md); border-top: 1px solid var(--color-gray-200); padding-top: var(--space-md); justify-content: flex-end; gap: 10px;">
+          <!-- Fallback direct text input -->
+          <div style="border-top: 1px solid var(--color-gray-200); padding-top: var(--space-md);">
+            <label for="voice-manual-input" class="input-label" style="font-size: var(--text-sm);">
+              Or type what you feel (Hindi, Gujarati, or English):
+            </label>
+            <textarea 
+              id="voice-manual-input" 
+              class="textarea" 
+              rows="3" 
+              placeholder="e.g. तेज बुखार और सांस लेने में तकलीफ (High fever and breathing difficulty)..."
+              oninput="window.handleManualVoiceText(this.value)"
+            ></textarea>
+          </div>
+
+          <div id="voice-actions" style="display: flex; margin-top: var(--space-md); border-top: 1px solid var(--color-gray-200); padding-top: var(--space-md); justify-content: flex-end; gap: 10px;">
             <button type="button" class="btn btn--ghost btn--sm" onclick="window.clearVoiceTranscript()">
               Clear
             </button>
             <button type="button" class="btn btn--primary btn--sm" onclick="window.submitVoiceTranscript()">
-              Analyze Spoken Symptoms →
+              Analyze Symptoms →
             </button>
           </div>
         </div>
 
-        <!-- Type Alternative Option -->
+        <!-- Back to Symptoms Checker -->
         <div style="display: flex; justify-content: center; gap: var(--space-md); align-items: center; flex-wrap: wrap;">
-          <span class="text-sm text-muted">Prefer typing?</span>
           <a href="#/symptoms" class="btn btn--secondary btn--sm">
-            ⌨️ Type Symptoms Instead →
+            🩺 Open Step-by-Step Questionnaire →
           </a>
         </div>
 
