@@ -108,24 +108,4 @@ export class HealthcareService {
       return [];
     }
   }
-
-  public static toggleFacilityVerification(facilityId: string): boolean {
-    const facility = HEALTHCARE_FACILITIES.find((f) => f.id === facilityId);
-    if (facility) {
-      facility.isVerified = !facility.isVerified;
-      facility.verifiedDate = new Date().toISOString().split('T')[0];
-      return !!facility.isVerified;
-    }
-    return false;
-  }
-
-  public static resolveCorrectionReport(reportId: string): void {
-    try {
-      const existing = this.getCorrectionReports();
-      const updated = existing.filter((r) => r.id !== reportId);
-      localStorage.setItem(STORAGE_KEYS.CORRECTION_REPORTS, JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
-  }
 }

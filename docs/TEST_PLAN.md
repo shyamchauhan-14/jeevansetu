@@ -28,3 +28,4 @@ We test all critical workflows using Vitest:
 4. **Multilingual Support**:
    - Switch language between English, Hindi, and Gujarati.
    - Verify emergency actions and critical warnings render in selected language.
+

@@ -19,26 +19,6 @@ const DEFAULT_CONTACTS: EmergencyContact[] = [
   }
 ];
 
-const DEFAULT_INCIDENT_AUDIT: EmergencyIncident[] = [
-  {
-    id: 'inc-demo-101',
-    status: 'resolved',
-    locality: 'Khed Taluka, Pune Sector',
-    emergencyType: 'acute_chest_pain',
-    alertStatus: 'Ambulance 108 dispatched to CHC Manchar',
-    createdAt: '2026-10-15T09:30:00.000Z',
-    resolvedAt: '2026-10-15T10:45:00.000Z'
-  },
-  {
-    id: 'inc-demo-102',
-    status: 'call_opened',
-    locality: 'Manchar Village Hub',
-    emergencyType: 'snake_bite',
-    alertStatus: 'Dialer 108 launched by user',
-    createdAt: '2026-11-02T14:12:00.000Z'
-  }
-];
-
 export interface LocationConsentResult {
   latitude?: number;
   longitude?: number;
@@ -114,7 +94,6 @@ export class SOSService {
 
     this.activeIncident = incident;
     this.persistActiveIncident(incident);
-    this.appendIncidentToHistory(incident);
     this.notifyListeners(incident);
     return incident;
   }
@@ -132,7 +111,6 @@ export class SOSService {
     }
 
     this.persistActiveIncident(this.activeIncident);
-    this.appendIncidentToHistory(this.activeIncident);
     this.notifyListeners(this.activeIncident);
 
     // Sync to Supabase in background
@@ -227,31 +205,6 @@ export class SOSService {
         console.error('[SOSService] Listener error:', e);
       }
     });
-  }
-
-  public static getIncidentAuditTrail(): EmergencyIncident[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.INCIDENT_HISTORY);
-      const list: EmergencyIncident[] = data ? JSON.parse(data) : DEFAULT_INCIDENT_AUDIT;
-      return list;
-    } catch {
-      return DEFAULT_INCIDENT_AUDIT;
-    }
-  }
-
-  public static appendIncidentToHistory(incident: EmergencyIncident): void {
-    try {
-      const current = this.getIncidentAuditTrail();
-      const existingIdx = current.findIndex((i) => i.id === incident.id);
-      if (existingIdx >= 0) {
-        current[existingIdx] = incident;
-      } else {
-        current.unshift(incident);
-      }
-      localStorage.setItem(STORAGE_KEYS.INCIDENT_HISTORY, JSON.stringify(current));
-    } catch {
-      // ignore
-    }
   }
 
   private static persistActiveIncident(incident: EmergencyIncident): void {

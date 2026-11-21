@@ -36,3 +36,4 @@
 ### 1.6 Multilingual & Voice Accessibility
 - **Target Languages**: Reviewed translations for English, Hindi (हिन्दी), and Gujarati (ગુજરાતી).
 - **Voice Recognition with Text Fallback**: Detects Web Speech API support; displays intuitive text-typing fallback if speech input is unsupported or denied.
+

@@ -11,3 +11,4 @@
 ## 3. Offline & Hardware Limitations
 - **Browser Storage Quotas**: Offline caching relies on IndexedDB and Cache Storage subject to browser-controlled storage eviction policies on low-memory mobile devices.
 - **Speech Recognition**: Speech-to-text requires modern browser Web Speech API support. A text keyboard fallback is provided for browsers lacking speech recognition.
+

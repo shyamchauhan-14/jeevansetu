@@ -34,3 +34,4 @@ JeevanSetu is a rural healthcare assistance platform designed for low-bandwidth,
    Patient health summaries with provenance tagging, printable/PDF export, multi-slot medication schedules with taken/skipped/snooze statuses.
 6. **Community Health Worker (ASHA) & Admin Workspace (`src/pages/WorkerWorkspace.ts`, `src/pages/AdminDashboard.ts`)**:
    Role-segregated workflows for patient registration, visit logs, consent management, facility verification, and anonymized aggregate signals.
+
