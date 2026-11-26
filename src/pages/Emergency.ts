@@ -5,6 +5,7 @@ import { I18nService } from '../services/i18nService';
 export function renderEmergencyPage(): string {
   const activeIncident = SOSService.getActiveIncident();
   const contacts = SOSService.getTrustedContacts();
+  const emergencyMsg = SOSService.generateEmergencyMessage(activeIncident || undefined);
 
   const statusLabel = activeIncident ? activeIncident.status.replace('_', ' ').toUpperCase() : 'NOT STARTED';
   const statusBadgeClass =
@@ -98,6 +99,28 @@ export function renderEmergencyPage(): string {
                   </button>
                 </div>
               </div>
+
+              ${contacts && contacts.length > 0 ? `
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border);">
+                  <div class="text-xs font-bold" style="color: var(--color-danger); margin-bottom: 8px;">
+                    📱 DISPATCH SOS MESSAGE TO REAL NUMBERS:
+                  </div>
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    ${contacts.map(c => `
+                      <a href="${SOSService.getSmsUri(c.phone, emergencyMsg)}" class="btn btn--emergency btn--sm" onclick="window.recordSmsDispatched('${c.phone}')">
+                        💬 SMS to ${c.name} (${c.phone})
+                      </a>
+                      <a href="${SOSService.getWhatsAppUri(c.phone, emergencyMsg)}" target="_blank" rel="noopener" class="btn btn--outline btn--sm" style="color: #16A34A; border-color: #16A34A;">
+                        🟢 WhatsApp
+                      </a>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : `
+                <div class="text-xs text-muted" style="margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--color-border);">
+                  💡 Tip: Add real phone numbers in <strong>Trusted Contacts</strong> below to send instant SMS alerts with your location coordinates.
+                </div>
+              `}
             </div>
           `
               : ''
@@ -196,9 +219,11 @@ export function renderEmergencyPage(): string {
                     <div style="font-weight: bold; font-size: var(--text-sm);">${c.name}</div>
                     <div class="text-xs text-muted">${c.phone} • ${c.relationship || 'Contact'}</div>
                   </div>
-                  <div style="display: flex; gap: 6px;">
-                    <a href="tel:${c.phone}" class="btn btn--outline btn--sm" onclick="window.recordDialerOpened('${c.phone}')">📞 Call</a>
-                    <button type="button" class="btn btn--ghost btn--sm" style="color: var(--color-danger);" onclick="window.handleDeleteContact('${c.id}')">🗑️</button>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <a href="${SOSService.getSmsUri(c.phone, emergencyMsg)}" class="btn btn--emergency btn--sm" style="font-size: 0.75rem; padding: 4px 8px;" onclick="window.recordSmsDispatched('${c.phone}')">💬 SMS</a>
+                    <a href="${SOSService.getWhatsAppUri(c.phone, emergencyMsg)}" target="_blank" rel="noopener" class="btn btn--outline btn--sm" style="font-size: 0.75rem; padding: 4px 8px; color: #16A34A; border-color: #16A34A;">🟢 WA</a>
+                    <a href="tel:${c.phone}" class="btn btn--outline btn--sm" style="font-size: 0.75rem; padding: 4px 8px;" onclick="window.recordDialerOpened('${c.phone}')">📞 Call</a>
+                    <button type="button" class="btn btn--ghost btn--sm" style="color: var(--color-danger); padding: 4px 6px;" onclick="window.handleDeleteContact('${c.id}')">🗑️</button>
                   </div>
                 </div>
               `

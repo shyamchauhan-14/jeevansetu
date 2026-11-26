@@ -254,6 +254,29 @@ export class SOSService {
     }
   }
 
+  public static generateEmergencyMessage(incident?: EmergencyIncident): string {
+    const inc = incident || this.getActiveIncident();
+    const locality = inc?.locality || 'Location pending';
+    const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    let mapsLink = '';
+    if (inc?.latitude && inc?.longitude) {
+      mapsLink = `\nMap: https://maps.google.com/?q=${inc.latitude.toFixed(5)},${inc.longitude.toFixed(5)}`;
+    }
+    return `🚨 EMERGENCY SOS ALERT!\nI need urgent medical help.\nLocality: ${locality}${mapsLink}\nTime: ${time}\n(Sent via JeevanSetu Rural Emergency Network)`;
+  }
+
+  public static getSmsUri(phone: string, message: string): string {
+    const cleanPhone = phone.replace(/[^\d+]/g, '');
+    const encoded = encodeURIComponent(message);
+    return `sms:${cleanPhone}?&body=${encoded}`;
+  }
+
+  public static getWhatsAppUri(phone: string, message: string): string {
+    const cleanPhone = phone.replace(/[^\d]/g, '');
+    const encoded = encodeURIComponent(message);
+    return `https://wa.me/${cleanPhone}?text=${encoded}`;
+  }
+
   private static persistActiveIncident(incident: EmergencyIncident): void {
     try {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_INCIDENT, JSON.stringify(incident));

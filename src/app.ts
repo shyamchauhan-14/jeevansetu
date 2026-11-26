@@ -230,6 +230,7 @@ declare global {
     handleAdminResolveCorrection: (reportId: string) => void;
     handleAdminUpdateTrend: (trendId: string, status: 'unverified_signal' | 'validated' | 'closed') => void;
     handleAdminSwitchRole: (role: UserRole) => void;
+    recordSmsDispatched: (phone: string) => void;
   }
 }
 
@@ -540,20 +541,42 @@ window.handleSosInstantTrigger = async () => {
   if (sosHoldTimeout) clearTimeout(sosHoldTimeout);
 
   showToast('🚨 Smart SOS Sequence Activated!', 'error', 5000);
-  SOSService.createIncident('Acquiring location...');
+  const incident = SOSService.createIncident('Acquiring location...');
   
   // Prompt location with graceful fallback
   const loc = await SOSService.requestLocationWithFallback();
   SOSService.setIncidentLocation(loc);
   SOSService.updateIncidentStatus('alert_queued', 'Alert queued for delivery');
 
-  // Check alert gateway
-  setTimeout(() => {
-    SOSService.updateIncidentStatus('sent', 'Simulated alert delivered to trusted contacts (Demo Gateway)');
-    showToast('Alert notification queued for trusted contacts', 'info');
-    router.handleHashChange();
-  }, 1200);
+  const contacts = SOSService.getTrustedContacts();
+  const emergencyMsg = SOSService.generateEmergencyMessage(incident);
 
+  if (contacts && contacts.length > 0) {
+    const primaryContact = contacts[0];
+    const smsUri = SOSService.getSmsUri(primaryContact.phone, emergencyMsg);
+    
+    SOSService.updateIncidentStatus('sent', `SMS alert prepared for ${primaryContact.name} (${primaryContact.phone})`);
+    showToast(`📱 Opening SMS for ${primaryContact.name} (${primaryContact.phone}). Tap Send!`, 'success', 7000);
+
+    // Launch native SMS composer with real phone number & pre-filled emergency text
+    setTimeout(() => {
+      try {
+        window.location.href = smsUri;
+      } catch (e) {
+        console.warn('Could not trigger SMS URI automatically:', e);
+      }
+    }, 700);
+  } else {
+    showToast('⚠️ No trusted contacts saved! Please add family phone numbers below.', 'warning', 6000);
+    SOSService.updateIncidentStatus('call_opened', 'Emergency dialers ready. No personal contacts configured.');
+  }
+
+  router.handleHashChange();
+};
+
+window.recordSmsDispatched = (phone: string) => {
+  SOSService.updateIncidentStatus('sent', `SMS application launched for ${phone}`);
+  showToast(`SMS alert prepared for ${phone}. Tap Send in your messaging app.`, 'success', 5000);
   router.handleHashChange();
 };
 

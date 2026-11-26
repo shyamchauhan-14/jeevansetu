@@ -66,4 +66,22 @@ describe('Phase 4 — Smart SOS Workflow & Emergency Tests', () => {
     const afterDelete = SOSService.getTrustedContacts();
     expect(afterDelete.some((c) => c.id === added.id)).toBe(false);
   });
+
+  it('Real SMS and WhatsApp URI generation: formulates emergency message with coordinates and valid URIs', () => {
+    const incident = SOSService.createIncident('Manchar Rural Sector');
+    incident.latitude = 18.9876;
+    incident.longitude = 73.8765;
+
+    const msg = SOSService.generateEmergencyMessage(incident);
+    expect(msg).toContain('EMERGENCY SOS ALERT');
+    expect(msg).toContain('Manchar Rural Sector');
+    expect(msg).toContain('https://maps.google.com/?q=18.98760,73.87650');
+
+    const smsUri = SOSService.getSmsUri('+91 98221 44556', msg);
+    expect(smsUri).toContain('sms:+919822144556');
+    expect(smsUri).toContain('body=');
+
+    const waUri = SOSService.getWhatsAppUri('+91 98221 44556', msg);
+    expect(waUri).toContain('https://wa.me/919822144556');
+  });
 });
