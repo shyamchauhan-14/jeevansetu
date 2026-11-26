@@ -1,6 +1,14 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
-export type UserRole = 'patient' | 'community_worker' | 'administrator' | 'clinician_reviewer';
+export type UserRole = 
+  | 'patient' 
+  | 'citizen'
+  | 'normal_user'
+  | 'community_worker' 
+  | 'administrator' 
+  | 'clinician_reviewer'
+  | 'super_admin'
+  | 'verified_doctor';
 
 export interface AuthUser {
   id: string;
@@ -87,8 +95,16 @@ export class AuthService {
     return this.currentUser;
   }
 
+  public static isSuperAdmin(user: AuthUser = this.getCurrentUser()): boolean {
+    return user.role === 'administrator' || user.role === 'super_admin';
+  }
+
+  public static isVerifiedDoctor(user: AuthUser = this.getCurrentUser()): boolean {
+    return user.role === 'clinician_reviewer' || user.role === 'verified_doctor';
+  }
+
   public static canAccessAdmin(user: AuthUser = this.getCurrentUser()): boolean {
-    return user.role === 'administrator' || user.role === 'clinician_reviewer';
+    return this.isSuperAdmin(user) || this.isVerifiedDoctor(user);
   }
 
   public static setRoleForTesting(role: UserRole): void {

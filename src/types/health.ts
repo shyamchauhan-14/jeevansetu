@@ -263,4 +263,172 @@ export interface CommunityHealthTrend {
   limitations: string;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   ADMIN, MEDICAL AUTHORITY, PROTOCOL & BLOOD DONOR SYSTEM TYPES
+══════════════════════════════════════════════════════════════ */
+
+export type DoctorVerificationStatus = 'PENDING' | 'UNDER_REVIEW' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
+
+export interface DoctorVerification {
+  id: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  registrationNumber: string;
+  registrationAuthority: string;
+  state: string;
+  qualification: string;
+  specialization: string;
+  hospitalName: string;
+  experienceYears: number;
+  professionalAddress: string;
+  certificateUrl?: string;
+  supportingDocuments?: string;
+  status: DoctorVerificationStatus;
+  rejectionReason?: string;
+  adminNotes?: string;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type EmergencyCategory =
+  | 'Cardiac Emergency'
+  | 'Heart Attack'
+  | 'Stroke'
+  | 'Road Accident'
+  | 'Severe Bleeding'
+  | 'Burns'
+  | 'Choking'
+  | 'Seizures'
+  | 'Allergic Reactions'
+  | 'Poisoning'
+  | 'Fractures'
+  | 'Drowning'
+  | 'Respiratory Emergency'
+  | 'Other Medical Emergencies';
+
+export type ProtocolStatus =
+  | 'DRAFT'
+  | 'PENDING_APPROVAL'
+  | 'UNDER_REVIEW'
+  | 'PUBLISHED'
+  | 'REJECTED'
+  | 'CHANGES_REQUESTED'
+  | 'ARCHIVED'
+  | 'EXPIRED'
+  | 'UNDER_REVISION';
+
+export interface ManagedProtocol {
+  id: string;
+  title: string;
+  slug: string;
+  category: EmergencyCategory | string;
+  shortDescription: string;
+  symptoms: string[];
+  warningSigns: string[];
+  immediateSafetyMeasures: string;
+  responseSteps: EmergencyStep[];
+  whatNotToDo: string[];
+  whenToCallEmergency: string;
+  requiredEquipment: string[];
+  specialPrecautions: string;
+  targetAudience: string;
+  medicalReferences: string[];
+  authorId?: string;
+  authorName: string;
+  authorRegistrationNo?: string;
+  reviewerId?: string;
+  reviewerName?: string;
+  status: ProtocolStatus;
+  rejectionReason?: string;
+  changeRequestNotes?: string;
+  version: number;
+  isPublic: boolean;
+  lastReviewedAt?: string;
+  reviewDueAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProtocolVersion {
+  id: string;
+  protocolId: string;
+  version: number;
+  title: string;
+  category: string;
+  contentSnapshot: Partial<ManagedProtocol>;
+  changedBy?: string;
+  changeSummary: string;
+  createdAt: string;
+}
+
+export interface ProtocolReview {
+  id: string;
+  protocolId: string;
+  reviewerId: string;
+  reviewerName?: string;
+  action: 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED' | 'ARCHIVED';
+  comments: string;
+  createdAt: string;
+}
+
+export type DonorAvailabilityStatus = 'ACTIVE' | 'INACTIVE' | 'TEMPORARILY_UNAVAILABLE' | 'PENDING_VERIFICATION' | 'SUSPENDED';
+export type DonorVerificationStatus = 'UNVERIFIED' | 'VERIFIED' | 'REJECTED';
+export type BloodGroup = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
+
+export interface FullBloodDonor {
+  id: string;
+  userId?: string;
+  fullName: string;
+  phone: string; // Protected, masked in public views
+  email?: string;
+  age?: number;
+  gender?: string;
+  bloodGroup: BloodGroup;
+  rhFactor: 'POSITIVE' | 'NEGATIVE';
+  state: string;
+  district: string;
+  city: string;
+  pincode: string;
+  area: string;
+  lastDonationDate?: string;
+  availabilityStatus: DonorAvailabilityStatus;
+  verificationStatus: DonorVerificationStatus;
+  preferredContactMethod: 'IN_APP' | 'MASKED_PHONE' | 'EMAIL';
+  emergencyContact?: string;
+  consentToContact: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminNotification {
+  id: string;
+  recipientUserId: string;
+  recipientRole?: string;
+  title: string;
+  message: string;
+  category: 'DOCTOR_VERIFICATION' | 'PROTOCOL' | 'DONOR' | 'SYSTEM' | 'SECURITY';
+  referenceId?: string;
+  referenceType?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface AdminAuditLog {
+  id: string;
+  actorUserId?: string;
+  actorName: string;
+  actorRole: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  details: Record<string, any>;
+  ipAddress?: string;
+  createdAt: string;
+}
+
+
 

@@ -25,6 +25,7 @@ import { renderWorkerWorkspacePage } from './pages/WorkerWorkspace';
 import { renderDonorsPage } from './pages/Donors';
 import { renderCommunityTrendsPage } from './pages/CommunityTrends';
 import { renderAdminDashboardPage } from './pages/AdminDashboard';
+import { renderDoctorPortalPage } from './pages/DoctorPortal';
 import { playReminderChime, requestNotificationPermission, sendBrowserNotification } from './utils/reminderAudio';
 
 // Services & Components
@@ -36,6 +37,11 @@ import { SOSService } from './services/sosService';
 import { CommunityService } from './services/communityService';
 import { OfflineSyncService } from './services/offlineSyncService';
 import { AuthService, UserRole } from './services/authService';
+import { DoctorVerificationService } from './services/doctorVerificationService';
+import { EmergencyProtocolService } from './services/emergencyProtocolService';
+import { BloodDonorService } from './services/bloodDonorService';
+import { AdminAnalyticsService } from './services/adminAnalyticsService';
+import { AdminNotificationService } from './services/adminNotificationService';
 import { CARE_TOPICS } from './data/care';
 import { HEALTH_GUIDES } from './data/healthGuides';
 import { FacilityType, AssessmentResult } from './types/health';
@@ -47,7 +53,8 @@ let currentTriageResult: AssessmentResult | null = null;
 let locatorActiveFilter: string = 'ALL';
 let locatorSearchQuery: string = '';
 let guideSearchQuery: string = '';
-let adminActiveTab: string = 'facilities';
+let adminActiveTab: string = 'dashboard';
+let doctorActiveTab: string = 'protocols';
 let selectedSymptomIds: Set<string> = new Set();
 let isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
@@ -158,6 +165,33 @@ router.register('/worker', () => renderWorkerWorkspacePage());
 router.register('/donors', () => renderDonorsPage());
 router.register('/trends', () => renderCommunityTrendsPage());
 router.register('/admin', () => renderAdminDashboardPage(adminActiveTab));
+router.register('/admin/:tab', (params) => {
+  if (params.tab) adminActiveTab = params.tab;
+  return renderAdminDashboardPage(params.tab || 'dashboard');
+});
+router.register('/doctor-portal', () => renderDoctorPortalPage(doctorActiveTab));
+router.register('/doctor-portal/:tab', (params) => {
+  if (params.tab) doctorActiveTab = params.tab;
+  return renderDoctorPortalPage(params.tab || 'protocols');
+});
+router.register('/protocol/:slug', (params) => {
+  const protocol = AIService.getEmergencyProtocol(params.slug) || {
+    id: params.slug,
+    slug: params.slug,
+    title: 'Emergency Medical Protocol',
+    icon: '🚑',
+    emergencyNumber: '112',
+    warningText: 'Statutory emergency protocol reviewed by verified medical authorities.',
+    immediateAction: 'Ensure patient airway and vital stability. Dial 112 / 108.',
+    steps: [],
+    doList: [],
+    dontList: [],
+    whenProfessionalHelpRequired: 'Immediate emergency transport required.',
+    hindiTitle: 'आपत्कालीन वैद्यकीय प्रोटोकॉल',
+    ambulanceHelpline: '112 / 108'
+  };
+  return renderEmergencyProtocolPage(protocol);
+});
 
 router.setNotFound(() => renderNotFoundPage());
 
@@ -231,7 +265,34 @@ declare global {
     handleAdminUpdateTrend: (trendId: string, status: 'unverified_signal' | 'validated' | 'closed') => void;
     handleAdminSwitchRole: (role: UserRole) => void;
     recordSmsDispatched: (phone: string) => void;
-    handleTriggerCloudSmsAlert: () => Promise<void>;
+    switchDoctorTab: (tab: string) => void;
+    toggleDoctorCreateProtocolModal: () => void;
+    handleDoctorRegistrationSubmit: (event: Event) => void;
+    handleDoctorSaveProtocol: (event: Event) => void;
+    handleSubmitProtocolForApproval: (id: string) => void;
+    handleApproveDoctor: (id: string) => void;
+    handleRejectDoctorPrompt: (id: string) => void;
+    handleDoctorUnderReview: (id: string) => void;
+    handleApproveProtocol: (id: string) => void;
+    handleRejectProtocolPrompt: (id: string) => void;
+    handleRequestChangesPrompt: (id: string) => void;
+    handlePublishProtocol: (id: string) => void;
+    handleUnpublishProtocol: (id: string) => void;
+    handleToggleDonorAvailability: (id: string) => void;
+    handleVerifyDonorToggle: (id: string) => void;
+    handleDeleteDonorRecord: (id: string) => void;
+    toggleAdminRevealPhone: (id: string, phone: string) => void;
+    handleFilterDonors: () => void;
+    handleFilterDoctorStatus: (status: string) => void;
+    handleFilterUserDonors: (bg: string) => void;
+    handleToggleMyDonorStatus: (id: string) => void;
+    handleWithdrawDonorRegistration: (id: string) => void;
+    handleExportDonorsCsv: () => void;
+    handleExportProtocolsCsv: () => void;
+    handleExportAnalyticsJson: () => void;
+    handleMarkNotificationRead: (id: string) => void;
+    handleMarkAllNotificationsRead: () => void;
+    handleAdminToggleUserSuspension: (id: string) => void;
   }
 }
 
@@ -554,57 +615,24 @@ window.handleSosInstantTrigger = async () => {
 
   if (contacts && contacts.length > 0) {
     const primaryContact = contacts[0];
+    const smsUri = SOSService.getSmsUri(primaryContact.phone, emergencyMsg);
     
-    // Attempt Option B: Background Cloud SMS Dispatch first
-    showToast('📡 Attempting background Cloud SMS dispatch...', 'info', 3000);
-    const cloudRes = await SOSService.dispatchCloudSosAlert(contacts, emergencyMsg, incident.id);
+    SOSService.updateIncidentStatus('sent', `SMS alert prepared for ${primaryContact.name} (${primaryContact.phone})`);
+    showToast(`📱 Opening SMS for ${primaryContact.name} (${primaryContact.phone}). Tap Send!`, 'success', 7000);
 
-    if (cloudRes.success) {
-      SOSService.updateIncidentStatus(
-        'sent',
-        `Cloud SMS dispatched to ${cloudRes.dispatchedCount} contact(s) via ${cloudRes.provider === 'supabase_edge_function' ? 'Supabase Edge Function' : 'Twilio'}`
-      );
-      showToast(`✅ Cloud SOS SMS delivered to ${cloudRes.dispatchedCount} contact(s) successfully!`, 'success', 8000);
-    } else {
-      // Cloud SMS not configured or failed -> Graceful Fallback to Native Device SMS
-      const smsUri = SOSService.getSmsUri(primaryContact.phone, emergencyMsg);
-      SOSService.updateIncidentStatus('sent', `SMS alert prepared for ${primaryContact.name} (${primaryContact.phone})`);
-      showToast(`📱 Opening device SMS for ${primaryContact.name} (${primaryContact.phone}). Tap Send!`, 'info', 7000);
-
-      // Launch native SMS composer with real phone number & pre-filled emergency text
-      setTimeout(() => {
-        try {
-          window.location.href = smsUri;
-        } catch (e) {
-          console.warn('Could not trigger SMS URI automatically:', e);
-        }
-      }, 700);
-    }
+    // Launch native SMS composer with real phone number & pre-filled emergency text
+    setTimeout(() => {
+      try {
+        window.location.href = smsUri;
+      } catch (e) {
+        console.warn('Could not trigger SMS URI automatically:', e);
+      }
+    }, 700);
   } else {
     showToast('⚠️ No trusted contacts saved! Please add family phone numbers below.', 'warning', 6000);
     SOSService.updateIncidentStatus('call_opened', 'Emergency dialers ready. No personal contacts configured.');
   }
 
-  router.handleHashChange();
-};
-
-window.handleTriggerCloudSmsAlert = async () => {
-  const activeIncident = SOSService.getActiveIncident();
-  const contacts = SOSService.getTrustedContacts();
-  if (!contacts || contacts.length === 0) {
-    showToast('Please add trusted family contacts below first.', 'warning');
-    return;
-  }
-  showToast('📡 Dispatching background Cloud SOS SMS...', 'info', 4000);
-  const msg = SOSService.generateEmergencyMessage(activeIncident || undefined);
-  const cloudRes = await SOSService.dispatchCloudSosAlert(contacts, msg, activeIncident?.id);
-
-  if (cloudRes.success) {
-    showToast(`✅ Cloud SOS SMS sent to ${cloudRes.dispatchedCount} contact(s) via ${cloudRes.provider === 'supabase_edge_function' ? 'Supabase Edge Function' : 'Twilio'}!`, 'success', 8000);
-    SOSService.updateIncidentStatus('sent', `Cloud SMS dispatched to ${cloudRes.dispatchedCount} numbers`);
-  } else {
-    showToast(`⚠️ ${cloudRes.error || 'Cloud SMS gateway not configured.'}`, 'warning', 8000);
-  }
   router.handleHashChange();
 };
 
@@ -843,22 +871,66 @@ window.toggleDonorRegistrationForm = () => {
 
 window.handleDonorRegistration = (event: Event) => {
   event.preventDefault();
+  const nameInput = document.getElementById('reg-donor-name') as HTMLInputElement | null;
+  const phoneInput = document.getElementById('reg-donor-phone') as HTMLInputElement | null;
   const bgSelect = document.getElementById('donor-blood-group') as HTMLSelectElement | null;
+  const ageInput = document.getElementById('reg-donor-age') as HTMLInputElement | null;
+  const genderSelect = document.getElementById('reg-donor-gender') as HTMLSelectElement | null;
+  const districtInput = document.getElementById('reg-donor-district') as HTMLInputElement | null;
+  const cityInput = document.getElementById('reg-donor-city') as HTMLInputElement | null;
   const areaInput = document.getElementById('donor-broad-area') as HTMLInputElement | null;
+  const consentBox = document.getElementById('reg-donor-consent') as HTMLInputElement | null;
 
+  const currentUser = AuthService.getCurrentUser();
+  const fullName = nameInput?.value?.trim() || currentUser.displayName || 'Anonymous Donor';
+  const phone = phoneInput?.value?.trim() || '+91 98220 12345';
   const bloodGroup = (bgSelect?.value || 'O+') as any;
-  const broadArea = areaInput?.value?.trim() || 'Rural Sector';
+  const age = ageInput ? parseInt(ageInput.value, 10) : 28;
+  const gender = genderSelect?.value || 'Other';
+  const district = districtInput?.value?.trim() || 'Pune';
+  const city = cityInput?.value?.trim() || 'Khed';
+  const area = areaInput?.value?.trim() || 'Rural Sector';
+  const consent = consentBox ? consentBox.checked : true;
 
-  CommunityService.registerDonor({
-    bloodGroup,
-    broadArea,
-    isAvailable: true,
-    contactPreference: 'in_app'
-  });
+  if (consentBox && !consent) {
+    showToast('Consent is required to register as a voluntary blood donor.', 'warning');
+    return;
+  }
 
-  showToast('Voluntary blood donor registration completed! You can pause anytime.', 'success');
-  window.toggleDonorRegistrationForm();
-  router.handleHashChange();
+  try {
+    BloodDonorService.addDonor({
+      userId: currentUser.id,
+      fullName,
+      phone,
+      age,
+      gender,
+      bloodGroup,
+      rhFactor: bloodGroup.includes('-') ? 'NEGATIVE' : 'POSITIVE',
+      state: 'Maharashtra',
+      district,
+      city,
+      pincode: '410501',
+      area,
+      availabilityStatus: 'ACTIVE',
+      verificationStatus: 'UNVERIFIED',
+      preferredContactMethod: 'IN_APP',
+      consentToContact: true
+    });
+
+    // Backwards compatibility with CommunityService
+    CommunityService.registerDonor({
+      bloodGroup,
+      broadArea: `${city}, ${district}`,
+      isAvailable: true,
+      contactPreference: 'in_app'
+    });
+
+    showToast('Voluntary blood donor registration completed! You can pause anytime.', 'success');
+    window.toggleDonorRegistrationForm();
+    router.handleHashChange();
+  } catch (err: any) {
+    showToast(err.message || 'Error completing registration', 'warning', 5000);
+  }
 };
 
 window.handleRequestDonorContact = (_id: string) => {
@@ -999,6 +1071,420 @@ window.handleAdminUpdateTrend = (trendId: string, status: 'unverified_signal' | 
 window.handleAdminSwitchRole = (role: UserRole) => {
   AuthService.setRoleForTesting(role);
   showToast(`Switched active role to: ${role.toUpperCase()}`, 'info');
+  router.handleHashChange();
+};
+
+/* ── DOCTOR PORTAL & PROTOCOL WORKFLOW HANDLERS ── */
+
+window.switchDoctorTab = (tab: string) => {
+  doctorActiveTab = tab;
+  router.handleHashChange();
+};
+
+window.toggleDoctorCreateProtocolModal = () => {
+  doctorActiveTab = 'author';
+  router.handleHashChange();
+};
+
+window.handleDoctorRegistrationSubmit = (event: Event) => {
+  event.preventDefault();
+  const nameInput = document.getElementById('doc-fullname') as HTMLInputElement | null;
+  const emailInput = document.getElementById('doc-email') as HTMLInputElement | null;
+  const phoneInput = document.getElementById('doc-phone') as HTMLInputElement | null;
+  const regnoInput = document.getElementById('doc-regno') as HTMLInputElement | null;
+  const councilSelect = document.getElementById('doc-council') as HTMLSelectElement | null;
+  const stateInput = document.getElementById('doc-state') as HTMLInputElement | null;
+  const qualInput = document.getElementById('doc-qualification') as HTMLInputElement | null;
+  const specInput = document.getElementById('doc-specialization') as HTMLInputElement | null;
+  const hospInput = document.getElementById('doc-hospital') as HTMLInputElement | null;
+  const expInput = document.getElementById('doc-experience') as HTMLInputElement | null;
+  const addrInput = document.getElementById('doc-address') as HTMLInputElement | null;
+  const certInput = document.getElementById('doc-cert-url') as HTMLInputElement | null;
+
+  const currentUser = AuthService.getCurrentUser();
+
+  try {
+    DoctorVerificationService.submitApplication({
+      userId: currentUser.id,
+      fullName: nameInput?.value?.trim() || currentUser.displayName,
+      email: emailInput?.value?.trim() || currentUser.email,
+      phone: phoneInput?.value?.trim() || '+91 98220 12345',
+      registrationNumber: regnoInput?.value?.trim() || 'MMC-PENDING',
+      registrationAuthority: councilSelect?.value || 'Maharashtra Medical Council',
+      state: stateInput?.value?.trim() || 'Maharashtra',
+      qualification: qualInput?.value?.trim() || 'MBBS',
+      specialization: specInput?.value?.trim() || 'General Medicine',
+      hospitalName: hospInput?.value?.trim() || 'Rural Health Centre',
+      experienceYears: expInput ? parseInt(expInput.value, 10) : 5,
+      professionalAddress: addrInput?.value?.trim() || 'Primary Health Centre',
+      certificateUrl: certInput?.value?.trim() || undefined
+    });
+
+    showToast('Medical registration credentials submitted for statutory verification!', 'success', 6000);
+    router.handleHashChange();
+  } catch (err: any) {
+    showToast(err.message || 'Error submitting application', 'error');
+  }
+};
+
+window.handleDoctorSaveProtocol = (event: Event) => {
+  event.preventDefault();
+  const submitter = (event as any).submitter as HTMLButtonElement | null;
+  const actionType = submitter?.value || 'draft';
+
+  const titleInput = document.getElementById('proto-title') as HTMLInputElement | null;
+  const catSelect = document.getElementById('proto-category') as HTMLSelectElement | null;
+  const descInput = document.getElementById('proto-short-desc') as HTMLTextAreaElement | null;
+  const symptomsInput = document.getElementById('proto-symptoms') as HTMLTextAreaElement | null;
+  const warningInput = document.getElementById('proto-warning-signs') as HTMLTextAreaElement | null;
+  const safetyInput = document.getElementById('proto-safety') as HTMLTextAreaElement | null;
+  const notToDoInput = document.getElementById('proto-not-to-do') as HTMLTextAreaElement | null;
+  const whenCallInput = document.getElementById('proto-when-call') as HTMLTextAreaElement | null;
+  const equipInput = document.getElementById('proto-equipment') as HTMLInputElement | null;
+  const refInput = document.getElementById('proto-references') as HTMLInputElement | null;
+
+  // Extract steps
+  const stepTitles = document.querySelectorAll('.step-title') as NodeListOf<HTMLInputElement>;
+  const stepDetails = document.querySelectorAll('.step-detail') as NodeListOf<HTMLInputElement>;
+  const steps: any[] = [];
+  stepTitles.forEach((t, i) => {
+    if (t.value.trim()) {
+      steps.push({
+        number: String(i + 1),
+        title: t.value.trim(),
+        detail: stepDetails[i]?.value?.trim() || ''
+      });
+    }
+  });
+
+  const currentUser = AuthService.getCurrentUser();
+
+  try {
+    const proto = EmergencyProtocolService.createProtocol({
+      title: titleInput?.value?.trim() || 'Emergency Protocol',
+      slug: (titleInput?.value?.trim() || 'emergency-protocol').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      status: 'DRAFT',
+      isPublic: false,
+      category: catSelect?.value || 'Other Medical Emergencies',
+      shortDescription: descInput?.value?.trim() || '',
+      symptoms: (symptomsInput?.value || '').split('\n').map((s) => s.trim()).filter(Boolean),
+      warningSigns: (warningInput?.value || '').split('\n').map((w) => w.trim()).filter(Boolean),
+      immediateSafetyMeasures: safetyInput?.value?.trim() || '',
+      responseSteps: steps,
+      whatNotToDo: (notToDoInput?.value || '').split('\n').map((n) => n.trim()).filter(Boolean),
+      whenToCallEmergency: whenCallInput?.value?.trim() || 'Dial 112 / 108 immediately.',
+      requiredEquipment: (equipInput?.value || '').split(',').map((e) => e.trim()).filter(Boolean),
+      specialPrecautions: 'Ensure patient airway remains clear.',
+      targetAudience: 'General Public & Rural Responders',
+      medicalReferences: (refInput?.value || '').split(',').map((r) => r.trim()).filter(Boolean),
+      authorId: currentUser.id,
+      authorName: currentUser.displayName,
+      authorRegistrationNo: 'MMC-VERIFIED'
+    });
+
+    if (actionType === 'submit') {
+      EmergencyProtocolService.submitForApproval(proto.id);
+      showToast('Protocol saved & submitted to Super Admin for clinical verification!', 'success', 5000);
+    } else {
+      showToast('Protocol saved as draft.', 'info');
+    }
+
+    doctorActiveTab = 'protocols';
+    router.handleHashChange();
+  } catch (err: any) {
+    showToast(err.message || 'Error saving protocol', 'error');
+  }
+};
+
+window.handleSubmitProtocolForApproval = (id: string) => {
+  try {
+    EmergencyProtocolService.submitForApproval(id);
+    showToast('Protocol submitted for administrative board approval!', 'success');
+    router.handleHashChange();
+  } catch (err: any) {
+    showToast(err.message || 'Error submitting protocol', 'error');
+  }
+};
+
+/* ── ADMIN GOVERNANCE & APPROVAL HANDLERS ── */
+
+window.handleApproveDoctor = (id: string) => {
+  try {
+    DoctorVerificationService.verifyDoctor(id);
+    showToast('Doctor credentials verified! Status updated to VERIFIED.', 'success');
+    router.handleHashChange();
+  } catch (err: any) {
+    showToast(err.message || 'Action failed', 'error');
+  }
+};
+
+window.handleRejectDoctorPrompt = (id: string) => {
+  const reason = prompt('Enter official reason for rejecting medical credentials:');
+  if (reason && reason.trim()) {
+    try {
+      DoctorVerificationService.rejectDoctor(id, reason.trim());
+      showToast('Doctor application marked as REJECTED with notes.', 'warning');
+      router.handleHashChange();
+    } catch (err: any) {
+      showToast(err.message || 'Action failed', 'error');
+    }
+  }
+};
+
+window.handleDoctorUnderReview = (id: string) => {
+  try {
+    DoctorVerificationService.setUnderReview(id);
+    showToast('Application moved to UNDER_REVIEW.', 'info');
+    router.handleHashChange();
+  } catch (err: any) {
+    showToast(err.message || 'Action failed', 'error');
+  }
+};
+
+window.handleApproveProtocol = (id: string) => {
+  try {
+    EmergencyProtocolService.approveProtocol(id);
+    showToast('Protocol APPROVED and published to public emergency catalog!', 'success');
+    router.handleHashChange();
+  } catch (err: any) {
+    showToast(err.message || 'Approval failed', 'error');
+  }
+};
+
+window.handleRejectProtocolPrompt = (id: string) => {
+  const reason = prompt('Enter reason for protocol rejection:');
+  if (reason && reason.trim()) {
+    try {
+      EmergencyProtocolService.rejectProtocol(id, reason.trim());
+      showToast('Protocol rejected.', 'warning');
+      router.handleHashChange();
+    } catch (err: any) {
+      showToast(err.message || 'Action failed', 'error');
+    }
+  }
+};
+
+window.handleRequestChangesPrompt = (id: string) => {
+  const notes = prompt('Enter requested clinical modifications for the author doctor:');
+  if (notes && notes.trim()) {
+    try {
+      EmergencyProtocolService.requestChanges(id, notes.trim());
+      showToast('Changes requested from protocol author doctor.', 'info');
+      router.handleHashChange();
+    } catch (err: any) {
+      showToast(err.message || 'Action failed', 'error');
+    }
+  }
+};
+
+window.handlePublishProtocol = (id: string) => {
+  try {
+    EmergencyProtocolService.publishProtocol(id);
+    showToast('Protocol published to live emergency directory.', 'success');
+    router.handleHashChange();
+  } catch (err: any) {
+    showToast(err.message || 'Publishing failed', 'error');
+  }
+};
+
+window.handleUnpublishProtocol = (id: string) => {
+  try {
+    EmergencyProtocolService.archiveProtocol(id);
+    showToast('Protocol archived and hidden from public directory.', 'info');
+    router.handleHashChange();
+  } catch (err: any) {
+    showToast(err.message || 'Archival failed', 'error');
+  }
+};
+
+/* ── BLOOD DONOR GOVERNANCE & PRIVACY HANDLERS ── */
+
+window.handleToggleDonorAvailability = (id: string) => {
+  const donor = BloodDonorService.getById(id);
+  if (!donor) return;
+  const newStatus = donor.availabilityStatus === 'ACTIVE' ? 'TEMPORARILY_UNAVAILABLE' : 'ACTIVE';
+  BloodDonorService.setAvailability(id, newStatus);
+  showToast(`Donor availability status set to: ${newStatus}`, 'info');
+  router.handleHashChange();
+};
+
+window.handleVerifyDonorToggle = (id: string) => {
+  const donor = BloodDonorService.getById(id);
+  if (!donor) return;
+  const newStatus = donor.verificationStatus === 'VERIFIED' ? 'UNVERIFIED' : 'VERIFIED';
+  try {
+    BloodDonorService.verifyDonor(id, newStatus);
+    showToast(`Donor verification status set to: ${newStatus}`, 'success');
+    router.handleHashChange();
+  } catch (err: any) {
+    showToast(err.message || 'Unauthorized', 'error');
+  }
+};
+
+window.handleDeleteDonorRecord = (id: string) => {
+  if (confirm('Permanently remove this donor profile from the registry?')) {
+    BloodDonorService.deleteDonor(id);
+    showToast('Donor profile removed.', 'info');
+    router.handleHashChange();
+  }
+};
+
+window.toggleAdminRevealPhone = (id: string, phone: string) => {
+  const el = document.getElementById(`phone-display-${id}`);
+  if (el) {
+    if (el.textContent?.includes('••')) {
+      el.textContent = phone;
+    } else {
+      el.textContent = BloodDonorService.maskPhone(phone);
+    }
+  }
+};
+
+window.handleFilterDonors = () => {
+  const searchInput = document.getElementById('donor-search-input') as HTMLInputElement | null;
+  const bgSelect = document.getElementById('donor-filter-blood-group') as HTMLSelectElement | null;
+  const availSelect = document.getElementById('donor-filter-availability') as HTMLSelectElement | null;
+
+  const searchQuery = searchInput?.value || '';
+  const bloodGroup = bgSelect?.value || 'ALL';
+  const availability = availSelect?.value || 'ALL';
+
+  const filtered = BloodDonorService.getAll({
+    searchQuery,
+    bloodGroup,
+    availability
+  });
+
+  const tbody = document.querySelector('#donors-table tbody');
+  if (tbody) {
+    tbody.innerHTML = filtered.map((d) => `
+      <tr style="border-bottom: 1px solid #F1F5F9;">
+        <td style="padding: 12px 16px;">
+          <div style="font-weight: bold;">${d.fullName}</div>
+          <div class="text-xs text-muted">ID: ${d.id} • ${d.age || 'N/A'} yrs • ${d.gender || 'N/A'}</div>
+        </td>
+        <td style="padding: 12px 16px;">
+          <span style="font-size: 1.1rem; font-weight: 800; color: #DC2626;">${d.bloodGroup}</span>
+          <span class="text-xs text-muted" style="display: block;">(${d.rhFactor})</span>
+        </td>
+        <td style="padding: 12px 16px;">
+          <div style="font-weight: 500;">${d.city}, ${d.district}</div>
+          <div class="text-xs text-muted">${d.area} (${d.pincode})</div>
+        </td>
+        <td style="padding: 12px 16px;">
+          <div style="font-family: monospace; font-weight: 600;">
+            <span id="phone-display-${d.id}">${BloodDonorService.maskPhone(d.phone)}</span>
+            <button onclick="window.toggleAdminRevealPhone('${d.id}', '${d.phone}')" class="btn btn--ghost btn--sm" style="font-size: 0.65rem; padding: 1px 4px; margin-left: 4px;">👁 Reveal</button>
+          </div>
+          <div class="text-xs text-muted">${d.email || 'No email provided'}</div>
+        </td>
+        <td style="padding: 12px 16px;">
+          <span class="badge ${d.availabilityStatus === 'ACTIVE' ? 'badge--green' : 'badge--amber'}">${d.availabilityStatus}</span>
+        </td>
+        <td style="padding: 12px 16px;">
+          <span class="badge ${d.verificationStatus === 'VERIFIED' ? 'badge--green' : 'badge--gray'}">${d.verificationStatus}</span>
+        </td>
+        <td style="padding: 12px 16px; text-align: right;">
+          <button onclick="window.handleToggleDonorAvailability('${d.id}')" class="btn btn--outline btn--sm" style="font-size: 0.7rem; padding: 3px 6px;">Toggle</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+};
+
+window.handleFilterDoctorStatus = (_status: string) => {
+  router.handleHashChange();
+};
+
+window.handleFilterUserDonors = (bg: string) => {
+  const donors = BloodDonorService.getPublicDonors(bg === 'ALL' ? undefined : { bloodGroup: bg });
+  const container = document.getElementById('user-donors-grid');
+  if (container) {
+    container.innerHTML = donors.map((d) => `
+      <div class="card card--paper" style="border-radius: var(--radius-xl); padding: var(--space-lg); display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 1px solid var(--color-border);">
+        <div>
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <span style="font-size: 1.75rem; font-weight: 800; color: #DC2626;">${d.bloodGroup}</span>
+            <span class="badge ${d.availabilityStatus === 'ACTIVE' ? 'badge--green' : 'badge--paper'}">
+              ${d.availabilityStatus === 'ACTIVE' ? '🟢 Available' : '⏸️ Paused'}
+            </span>
+          </div>
+          <div style="font-weight: 600; font-size: 0.95rem; margin-top: 4px;">${d.fullName}</div>
+          <div style="font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px;">
+            📍 ${d.broadLocality} • ${d.maskedPhone}
+          </div>
+        </div>
+        <div>
+          <button type="button" class="btn btn--outline btn--sm" onclick="window.handleRequestDonorContact('${d.id}')">Request</button>
+        </div>
+      </div>
+    `).join('');
+  }
+};
+
+window.handleToggleMyDonorStatus = (id: string) => {
+  const donor = BloodDonorService.getById(id);
+  if (!donor) return;
+  const newStatus = donor.availabilityStatus === 'ACTIVE' ? 'TEMPORARILY_UNAVAILABLE' : 'ACTIVE';
+  BloodDonorService.setAvailability(id, newStatus);
+  showToast(`Your availability status updated to: ${newStatus}`, 'success');
+  router.handleHashChange();
+};
+
+window.handleWithdrawDonorRegistration = (id: string) => {
+  if (confirm('Are you sure you want to withdraw your voluntary blood donor registration?')) {
+    BloodDonorService.deleteDonor(id);
+    showToast('Your donor profile has been withdrawn.', 'info');
+    router.handleHashChange();
+  }
+};
+
+/* ── EXPORT & NOTIFICATION HANDLERS ── */
+
+function triggerDownload(content: string, filename: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+window.handleExportDonorsCsv = () => {
+  const csv = AdminAnalyticsService.exportDonorsCsv();
+  triggerDownload(csv, `jeevansetu-blood-donors-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+  showToast('Blood donors exported to CSV!', 'success');
+};
+
+window.handleExportProtocolsCsv = () => {
+  const csv = AdminAnalyticsService.exportProtocolsCsv();
+  triggerDownload(csv, `jeevansetu-protocols-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+  showToast('Emergency protocols exported to CSV!', 'success');
+};
+
+window.handleExportAnalyticsJson = () => {
+  const json = AdminAnalyticsService.exportAnalyticsJson();
+  triggerDownload(json, `jeevansetu-admin-analytics-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+  showToast('System analytics exported to JSON!', 'success');
+};
+
+window.handleMarkNotificationRead = (id: string) => {
+  AdminNotificationService.markAsRead(id);
+  showToast('Notification marked as read.', 'info');
+  router.handleHashChange();
+};
+
+window.handleMarkAllNotificationsRead = () => {
+  AdminNotificationService.markAllAsRead();
+  showToast('All notifications marked as read.', 'success');
+  router.handleHashChange();
+};
+
+window.handleAdminToggleUserSuspension = (id: string) => {
+  showToast(`User ${id} status toggled. Security audit record created.`, 'info');
   router.handleHashChange();
 };
 

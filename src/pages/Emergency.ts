@@ -91,9 +91,6 @@ export function renderEmergencyPage(): string {
                   <div class="text-xs text-muted" style="margin-top: 2px;">Locality: ${activeIncident.locality || 'Locating...'} • Status: ${activeIncident.alertStatus}</div>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                  <button type="button" class="btn btn--outline btn--sm" onclick="window.handleTriggerCloudSmsAlert()">
-                    📡 Cloud SMS
-                  </button>
                   <button type="button" class="btn btn--outline btn--sm" onclick="window.resolveEmergencyIncident()">
                     ✓ Mark Resolved
                   </button>
