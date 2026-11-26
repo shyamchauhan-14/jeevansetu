@@ -231,6 +231,7 @@ declare global {
     handleAdminUpdateTrend: (trendId: string, status: 'unverified_signal' | 'validated' | 'closed') => void;
     handleAdminSwitchRole: (role: UserRole) => void;
     recordSmsDispatched: (phone: string) => void;
+    handleTriggerCloudSmsAlert: () => Promise<void>;
   }
 }
 
@@ -553,24 +554,57 @@ window.handleSosInstantTrigger = async () => {
 
   if (contacts && contacts.length > 0) {
     const primaryContact = contacts[0];
-    const smsUri = SOSService.getSmsUri(primaryContact.phone, emergencyMsg);
     
-    SOSService.updateIncidentStatus('sent', `SMS alert prepared for ${primaryContact.name} (${primaryContact.phone})`);
-    showToast(`📱 Opening SMS for ${primaryContact.name} (${primaryContact.phone}). Tap Send!`, 'success', 7000);
+    // Attempt Option B: Background Cloud SMS Dispatch first
+    showToast('📡 Attempting background Cloud SMS dispatch...', 'info', 3000);
+    const cloudRes = await SOSService.dispatchCloudSosAlert(contacts, emergencyMsg, incident.id);
 
-    // Launch native SMS composer with real phone number & pre-filled emergency text
-    setTimeout(() => {
-      try {
-        window.location.href = smsUri;
-      } catch (e) {
-        console.warn('Could not trigger SMS URI automatically:', e);
-      }
-    }, 700);
+    if (cloudRes.success) {
+      SOSService.updateIncidentStatus(
+        'sent',
+        `Cloud SMS dispatched to ${cloudRes.dispatchedCount} contact(s) via ${cloudRes.provider === 'supabase_edge_function' ? 'Supabase Edge Function' : 'Twilio'}`
+      );
+      showToast(`✅ Cloud SOS SMS delivered to ${cloudRes.dispatchedCount} contact(s) successfully!`, 'success', 8000);
+    } else {
+      // Cloud SMS not configured or failed -> Graceful Fallback to Native Device SMS
+      const smsUri = SOSService.getSmsUri(primaryContact.phone, emergencyMsg);
+      SOSService.updateIncidentStatus('sent', `SMS alert prepared for ${primaryContact.name} (${primaryContact.phone})`);
+      showToast(`📱 Opening device SMS for ${primaryContact.name} (${primaryContact.phone}). Tap Send!`, 'info', 7000);
+
+      // Launch native SMS composer with real phone number & pre-filled emergency text
+      setTimeout(() => {
+        try {
+          window.location.href = smsUri;
+        } catch (e) {
+          console.warn('Could not trigger SMS URI automatically:', e);
+        }
+      }, 700);
+    }
   } else {
     showToast('⚠️ No trusted contacts saved! Please add family phone numbers below.', 'warning', 6000);
     SOSService.updateIncidentStatus('call_opened', 'Emergency dialers ready. No personal contacts configured.');
   }
 
+  router.handleHashChange();
+};
+
+window.handleTriggerCloudSmsAlert = async () => {
+  const activeIncident = SOSService.getActiveIncident();
+  const contacts = SOSService.getTrustedContacts();
+  if (!contacts || contacts.length === 0) {
+    showToast('Please add trusted family contacts below first.', 'warning');
+    return;
+  }
+  showToast('📡 Dispatching background Cloud SOS SMS...', 'info', 4000);
+  const msg = SOSService.generateEmergencyMessage(activeIncident || undefined);
+  const cloudRes = await SOSService.dispatchCloudSosAlert(contacts, msg, activeIncident?.id);
+
+  if (cloudRes.success) {
+    showToast(`✅ Cloud SOS SMS sent to ${cloudRes.dispatchedCount} contact(s) via ${cloudRes.provider === 'supabase_edge_function' ? 'Supabase Edge Function' : 'Twilio'}!`, 'success', 8000);
+    SOSService.updateIncidentStatus('sent', `Cloud SMS dispatched to ${cloudRes.dispatchedCount} numbers`);
+  } else {
+    showToast(`⚠️ ${cloudRes.error || 'Cloud SMS gateway not configured.'}`, 'warning', 8000);
+  }
   router.handleHashChange();
 };
 

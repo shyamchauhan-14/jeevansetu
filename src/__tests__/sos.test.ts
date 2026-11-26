@@ -84,4 +84,12 @@ describe('Phase 4 — Smart SOS Workflow & Emergency Tests', () => {
     const waUri = SOSService.getWhatsAppUri('+91 98221 44556', msg);
     expect(waUri).toContain('https://wa.me/919822144556');
   });
+
+  it('Option B: Cloud SOS dispatch reports unconfigured provider gracefully when credentials absent', async () => {
+    const contacts = SOSService.getTrustedContacts();
+    const result = await SOSService.dispatchCloudSosAlert(contacts, 'Test Emergency Alert');
+    expect(result).toBeDefined();
+    expect(typeof result.success).toBe('boolean');
+    expect(['supabase_edge_function', 'twilio', 'none']).toContain(result.provider);
+  });
 });

@@ -1,5 +1,5 @@
 import { EmergencyContact, EmergencyIncident, EmergencyIncidentStatus } from '../types/health';
-import { SupabaseService } from './supabaseClient';
+import { SupabaseService, supabase, isSupabaseConfigured } from './supabaseClient';
 import { AuthService } from './authService';
 
 const STORAGE_KEYS = {
@@ -275,6 +275,100 @@ export class SOSService {
     const cleanPhone = phone.replace(/[^\d]/g, '');
     const encoded = encodeURIComponent(message);
     return `https://wa.me/${cleanPhone}?text=${encoded}`;
+  }
+
+  /**
+   * Option B: Dispatches real SMS alerts through Cloud SMS Gateway (Twilio / Supabase Edge Functions)
+   * Programmatic background delivery without requiring native phone SMS composer.
+   */
+  public static async dispatchCloudSosAlert(
+    contacts: EmergencyContact[],
+    message: string,
+    incidentId?: string
+  ): Promise<{
+    success: boolean;
+    provider: 'supabase_edge_function' | 'twilio' | 'none';
+    dispatchedCount: number;
+    error?: string;
+  }> {
+    if (!contacts || contacts.length === 0) {
+      return { success: false, provider: 'none', dispatchedCount: 0, error: 'No contacts configured.' };
+    }
+
+    // 1. Try Supabase Edge Function: send-sos-sms
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase.functions.invoke('send-sos-sms', {
+          body: {
+            contacts: contacts.map((c) => ({ name: c.name, phone: c.phone })),
+            message,
+            incidentId
+          }
+        });
+
+        if (!error && data && data.success) {
+          return {
+            success: true,
+            provider: 'supabase_edge_function',
+            dispatchedCount: data.dispatchedCount || contacts.length
+          };
+        }
+      } catch (err) {
+        console.warn('[SOSService] Supabase Edge Function dispatch failed:', err);
+      }
+    }
+
+    // 2. Try direct Twilio API if client environment variables are set
+    const accountSid = (import.meta as any).env?.VITE_TWILIO_ACCOUNT_SID;
+    const authToken = (import.meta as any).env?.VITE_TWILIO_AUTH_TOKEN;
+    const fromPhone = (import.meta as any).env?.VITE_TWILIO_PHONE_NUMBER;
+
+    if (accountSid && authToken && fromPhone) {
+      try {
+        const basicAuth = btoa(`${accountSid}:${authToken}`);
+        const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+        let sentCount = 0;
+
+        for (const contact of contacts) {
+          const cleanPhone = contact.phone.replace(/[^\d+]/g, '');
+          const body = new URLSearchParams({
+            To: cleanPhone,
+            From: fromPhone,
+            Body: message
+          });
+
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${basicAuth}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: body.toString()
+          });
+
+          if (res.ok) {
+            sentCount += 1;
+          }
+        }
+
+        if (sentCount > 0) {
+          return {
+            success: true,
+            provider: 'twilio',
+            dispatchedCount: sentCount
+          };
+        }
+      } catch (err: any) {
+        console.warn('[SOSService] Direct Twilio dispatch failed:', err);
+      }
+    }
+
+    return {
+      success: false,
+      provider: 'none',
+      dispatchedCount: 0,
+      error: 'Cloud SMS credentials not configured. Please set Twilio in Supabase Edge Functions or .env.'
+    };
   }
 
   private static persistActiveIncident(incident: EmergencyIncident): void {
