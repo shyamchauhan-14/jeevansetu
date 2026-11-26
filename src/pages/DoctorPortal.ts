@@ -139,14 +139,19 @@ export function renderDoctorPortalPage(activeTab = 'protocols'): string {
             </form>
           </div>
 
-          <!-- Evaluation / Demo Helper -->
-          <div class="card card--paper" style="border-radius: var(--radius-xl); padding: var(--space-md) var(--space-lg); text-align: center;">
+          <!-- Doctor Login Helper -->
+          <div class="card card--paper" style="border-radius: var(--radius-xl); padding: var(--space-md) var(--space-lg); text-align: center; border: 1px dashed #0284C7;">
             <div class="text-xs text-muted" style="margin-bottom: 8px;">
-              <strong>Demo Environment:</strong> You can quickly simulate an approved clinician session:
+              <strong>Already a Verified Doctor?</strong> Sign in with your Medical Council credentials:
             </div>
-            <button onclick="window.handleAdminSwitchRole('verified_doctor')" class="btn btn--outline btn--sm">
-              🩺 Switch Session to Verified Doctor (Dr. Rajesh Kulkarni)
-            </button>
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+              <a href="#/login/doctor" class="btn btn--primary btn--sm" style="background: #0284C7; border-color: #0284C7;">
+                🩺 Sign In to Doctor Portal
+              </a>
+              <button onclick="window.autofillDoctorLogin()" class="btn btn--outline btn--sm">
+                ⚡ Instant Doctor Sign-In (Dr. Rajesh Kulkarni)
+              </button>
+            </div>
           </div>
 
         </div>
@@ -201,6 +206,9 @@ export function renderDoctorPortalPage(activeTab = 'protocols'): string {
             <a href="#/admin" class="btn btn--outline btn--sm">
               Admin Governance Console
             </a>
+            <button onclick="window.handleAdminSignOut()" class="btn btn--outline btn--sm" style="color: #DC2626; border-color: #FCA5A5;">
+              🚪 Sign Out
+            </button>
           </div>
         </div>
 

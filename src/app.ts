@@ -26,6 +26,7 @@ import { renderDonorsPage } from './pages/Donors';
 import { renderCommunityTrendsPage } from './pages/CommunityTrends';
 import { renderAdminDashboardPage } from './pages/AdminDashboard';
 import { renderDoctorPortalPage } from './pages/DoctorPortal';
+import { renderAdminLoginPage } from './pages/AdminLogin';
 import { playReminderChime, requestNotificationPermission, sendBrowserNotification } from './utils/reminderAudio';
 
 // Services & Components
@@ -164,6 +165,8 @@ router.register('/reminders', () => renderRemindersPage());
 router.register('/worker', () => renderWorkerWorkspacePage());
 router.register('/donors', () => renderDonorsPage());
 router.register('/trends', () => renderCommunityTrendsPage());
+router.register('/login', () => renderAdminLoginPage('super_admin'));
+router.register('/login/:role', (params) => renderAdminLoginPage(params.role === 'doctor' ? 'doctor' : 'super_admin'));
 router.register('/admin', () => renderAdminDashboardPage(adminActiveTab));
 router.register('/admin/:tab', (params) => {
   if (params.tab) adminActiveTab = params.tab;
@@ -293,6 +296,12 @@ declare global {
     handleMarkNotificationRead: (id: string) => void;
     handleMarkAllNotificationsRead: () => void;
     handleAdminToggleUserSuspension: (id: string) => void;
+    switchLoginTab: (tab: 'super_admin' | 'doctor') => void;
+    handleSuperAdminLogin: (event: Event) => Promise<void>;
+    handleDoctorLogin: (event: Event) => Promise<void>;
+    autofillSuperAdminLogin: () => Promise<void>;
+    autofillDoctorLogin: () => Promise<void>;
+    handleAdminSignOut: () => Promise<void>;
   }
 }
 
@@ -1486,6 +1495,99 @@ window.handleMarkAllNotificationsRead = () => {
 window.handleAdminToggleUserSuspension = (id: string) => {
   showToast(`User ${id} status toggled. Security audit record created.`, 'info');
   router.handleHashChange();
+};
+
+/* ── ROLE-WISE AUTHENTICATION HANDLERS ── */
+
+window.switchLoginTab = (tab: 'super_admin' | 'doctor') => {
+  const superAdminForm = document.getElementById('login-form-superadmin');
+  const doctorForm = document.getElementById('login-form-doctor');
+  const btnSuperAdmin = document.getElementById('tab-btn-superadmin');
+  const btnDoctor = document.getElementById('tab-btn-doctor');
+
+  if (superAdminForm && doctorForm && btnSuperAdmin && btnDoctor) {
+    if (tab === 'super_admin') {
+      superAdminForm.style.display = 'block';
+      doctorForm.style.display = 'none';
+      btnSuperAdmin.style.background = '#064E3B';
+      btnSuperAdmin.style.color = '#FFFFFF';
+      btnDoctor.style.background = 'transparent';
+      btnDoctor.style.color = '#475569';
+    } else {
+      superAdminForm.style.display = 'none';
+      doctorForm.style.display = 'block';
+      btnDoctor.style.background = '#064E3B';
+      btnDoctor.style.color = '#FFFFFF';
+      btnSuperAdmin.style.background = 'transparent';
+      btnSuperAdmin.style.color = '#475569';
+    }
+  }
+};
+
+window.handleSuperAdminLogin = async (event: Event) => {
+  event.preventDefault();
+  const emailInput = document.getElementById('admin-login-email') as HTMLInputElement | null;
+  const passwordInput = document.getElementById('admin-login-password') as HTMLInputElement | null;
+
+  const email = emailInput?.value?.trim() || '';
+  const password = passwordInput?.value || '';
+
+  const res = await AuthService.loginAsSuperAdmin(email, password);
+  if (res.success && res.user) {
+    showToast('Welcome, Super Administrator!', 'success', 4000);
+    router.navigate('#/admin');
+  } else {
+    showToast(res.error || 'Authentication failed. Please check credentials.', 'error', 6000);
+  }
+};
+
+window.handleDoctorLogin = async (event: Event) => {
+  event.preventDefault();
+  const idInput = document.getElementById('doc-login-id') as HTMLInputElement | null;
+  const passwordInput = document.getElementById('doc-login-password') as HTMLInputElement | null;
+
+  const identifier = idInput?.value?.trim() || '';
+  const password = passwordInput?.value || '';
+
+  const res = await AuthService.loginAsDoctor(identifier, password);
+  if (res.success && res.user) {
+    showToast(`Welcome, Dr. ${res.user.displayName}!`, 'success', 4000);
+    router.navigate('#/doctor-portal');
+  } else {
+    showToast(res.error || 'Doctor sign in failed. Please check council registration number.', 'error', 6000);
+  }
+};
+
+window.autofillSuperAdminLogin = async () => {
+  const emailInput = document.getElementById('admin-login-email') as HTMLInputElement | null;
+  const passwordInput = document.getElementById('admin-login-password') as HTMLInputElement | null;
+  if (emailInput) emailInput.value = 'admin@jeevansetu.med';
+  if (passwordInput) passwordInput.value = 'Admin@123';
+
+  const res = await AuthService.loginAsSuperAdmin('admin@jeevansetu.med', 'Admin@123');
+  if (res.success) {
+    showToast('Signed in as Super Administrator!', 'success', 4000);
+    router.navigate('#/admin');
+  }
+};
+
+window.autofillDoctorLogin = async () => {
+  const idInput = document.getElementById('doc-login-id') as HTMLInputElement | null;
+  const passwordInput = document.getElementById('doc-login-password') as HTMLInputElement | null;
+  if (idInput) idInput.value = 'MMC-2008-041289';
+  if (passwordInput) passwordInput.value = 'Doctor@123';
+
+  const res = await AuthService.loginAsDoctor('MMC-2008-041289', 'Doctor@123');
+  if (res.success && res.user) {
+    showToast(`Signed in as ${res.user.displayName}!`, 'success', 4000);
+    router.navigate('#/doctor-portal');
+  }
+};
+
+window.handleAdminSignOut = async () => {
+  await AuthService.signOut();
+  showToast('Signed out of authority session.', 'info');
+  router.navigate('#/login');
 };
 
 // Register Service Worker for offline-first caching

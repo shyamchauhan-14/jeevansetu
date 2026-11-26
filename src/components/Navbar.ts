@@ -77,9 +77,8 @@ export function renderNavbar(currentPath: string): string {
         ${mobileNavItems}
         <div class="divider divider--light"></div>
         <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-          <a href="#/worker" class="btn btn--outline btn--sm" onclick="window.closeMobileMenu()">👩‍⚕️ ASHA Workspace</a>
+          <a href="#/doctor-portal" class="btn btn--outline btn--sm" onclick="window.closeMobileMenu()">🩺 Doctor Portal</a>
           <a href="#/donors" class="btn btn--outline btn--sm" onclick="window.closeMobileMenu()">🩸 Blood Donors</a>
-          <a href="#/trends" class="btn btn--outline btn--sm" onclick="window.closeMobileMenu()">📈 Health Trends</a>
           <a href="#/offline" class="btn btn--outline btn--sm" onclick="window.closeMobileMenu()">📶 Offline Hub</a>
           <a href="#/admin" class="btn btn--primary btn--sm" onclick="window.closeMobileMenu()">🛡️ Admin Console</a>
         </div>

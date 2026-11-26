@@ -4,54 +4,15 @@ import { EmergencyProtocolService } from '../services/emergencyProtocolService';
 import { BloodDonorService } from '../services/bloodDonorService';
 import { AdminAnalyticsService } from '../services/adminAnalyticsService';
 import { AdminNotificationService } from '../services/adminNotificationService';
+import { renderAdminLoginPage } from './AdminLogin';
 
 export function renderAdminDashboardPage(activeTab = 'dashboard'): string {
   const currentUser = AuthService.getCurrentUser();
   const canAccess = AuthService.canAccessAdmin(currentUser);
 
-  // RBAC Barrier: Require Super Admin or Clinician Reviewer
-  if (!canAccess) {
-    return `
-      <div class="page-content">
-        <div class="container" style="padding-top: var(--space-xl); padding-bottom: var(--space-3xl); max-width: 700px;">
-          <div class="card card--paper" style="border-radius: var(--radius-xl); padding: clamp(24px, 4vw, 40px); text-align: center; border-top: 6px solid var(--color-emergency);">
-            <div style="font-size: 3rem; margin-bottom: 12px;">🛡️</div>
-            <div class="badge badge--red" style="margin-bottom: var(--space-sm);">
-              RESTRICTED ACCESS • RBAC ENFORCED
-            </div>
-            <h1 class="text-h2" style="color: var(--color-emergency); margin-bottom: var(--space-sm);">
-              Super Administrator Role Required
-            </h1>
-            <p class="text-base text-muted" style="line-height: var(--leading-relaxed); margin-bottom: var(--space-lg);">
-              The JeevanSetu Healthcare SaaS Governance Console and Medical Authority System are strictly restricted. Only verified accounts with <strong>SUPER ADMIN</strong> or <strong>VERIFIED DOCTOR</strong> permissions can access clinical management data.
-            </p>
-            <div class="card card--paper" style="background: var(--color-bg-subtle); padding: 14px; border-radius: var(--radius-md); margin-bottom: var(--space-lg); text-align: left; font-size: var(--text-xs);">
-              <div><strong>Current Identity:</strong> ${currentUser.displayName} (${currentUser.email})</div>
-              <div><strong>Active Role:</strong> <span class="badge badge--gray">${currentUser.role.toUpperCase()}</span></div>
-              <div style="margin-top: 4px; color: var(--color-text-muted);">Client and server permissions validated against PostgreSQL RLS policies.</div>
-            </div>
-
-            <!-- Demo Mode Role Elevation -->
-            <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
-              <div class="text-xs text-muted" style="margin-bottom: 12px;">
-                <strong>Demo / Evaluation Mode:</strong> Switch session role to inspect the admin features:
-              </div>
-              <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-                <button onclick="window.handleAdminSwitchRole('super_admin')" class="btn btn--primary btn--sm">
-                  Switch to Super Admin
-                </button>
-                <button onclick="window.handleAdminSwitchRole('verified_doctor')" class="btn btn--outline btn--sm">
-                  Switch to Verified Doctor
-                </button>
-                <a href="#/" class="btn btn--ghost btn--sm">
-                  ← Back to Home
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+  // RBAC Barrier: If not authenticated as Super Admin, display dedicated Role-Wise Login Page
+  if (!canAccess || !AuthService.isSuperAdmin(currentUser)) {
+    return renderAdminLoginPage('super_admin');
   }
 
   // Gather system state
@@ -155,6 +116,9 @@ export function renderAdminDashboardPage(activeTab = 'dashboard'): string {
             </a>
             <button onclick="window.handleExportDonorsCsv()" class="btn btn--outline btn--sm">
               📥 Export CSV
+            </button>
+            <button onclick="window.handleAdminSignOut()" class="btn btn--outline btn--sm" style="color: #DC2626; border-color: #FCA5A5;">
+              🚪 Logout
             </button>
             <a href="#/" class="btn btn--ghost btn--sm">
               ← Public App
@@ -1092,7 +1056,7 @@ function renderSessionRoleView(currentUser: any): string {
         <div><strong>Active Role:</strong> <span class="badge badge--green">${currentUser.role.toUpperCase()}</span></div>
       </div>
 
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
         <button onclick="window.handleAdminSwitchRole('super_admin')" class="btn btn--primary btn--sm">
           Switch to Super Admin
         </button>
@@ -1101,6 +1065,12 @@ function renderSessionRoleView(currentUser: any): string {
         </button>
         <button onclick="window.handleAdminSwitchRole('citizen')" class="btn btn--ghost btn--sm">
           Switch to Normal User
+        </button>
+      </div>
+
+      <div style="border-top: 1px solid #E2E8F0; padding-top: 16px;">
+        <button onclick="window.handleAdminSignOut()" class="btn btn--emergency btn--sm">
+          🚪 Sign Out from Admin Console
         </button>
       </div>
     </div>

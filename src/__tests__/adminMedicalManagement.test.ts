@@ -529,4 +529,36 @@ describe('JeevanSetu Admin Panel & Medical Authority System (15 Module 12 Scenar
     expect(parsed.overview).toBeDefined();
     expect(parsed.bloodGroupDistribution).toBeInstanceOf(Array);
   });
+
+  // Role-Wise Authentication tests
+  it('authenticates Super Admin with dedicated credentials and elevates permissions', async () => {
+    AuthService.setRoleForTesting('citizen');
+    expect(AuthService.isSuperAdmin()).toBe(false);
+
+    const loginRes = await AuthService.loginAsSuperAdmin('admin@jeevansetu.med', 'Admin@123');
+    expect(loginRes.success).toBe(true);
+    expect(loginRes.user?.role).toBe('super_admin');
+    expect(AuthService.isSuperAdmin()).toBe(true);
+
+    // Negative case: invalid email
+    const badLogin = await AuthService.loginAsSuperAdmin('stranger@random.com', 'Admin@123');
+    expect(badLogin.success).toBe(false);
+    expect(badLogin.error).toContain('Invalid Super Admin email');
+  });
+
+  it('authenticates Verified Doctor with Medical Council credentials and elevates permissions', async () => {
+    AuthService.setRoleForTesting('citizen');
+    expect(AuthService.isVerifiedDoctor()).toBe(false);
+
+    // Login using registration number
+    const docLogin = await AuthService.loginAsDoctor('MMC-2008-041289', 'Doctor@123');
+    expect(docLogin.success).toBe(true);
+    expect(docLogin.user?.role).toBe('verified_doctor');
+    expect(AuthService.isVerifiedDoctor()).toBe(true);
+
+    // Sign out
+    await AuthService.signOut();
+    expect(AuthService.isVerifiedDoctor()).toBe(false);
+    expect(AuthService.getCurrentUser().isGuest).toBe(true);
+  });
 });
