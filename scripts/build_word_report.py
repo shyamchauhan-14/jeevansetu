@@ -111,10 +111,10 @@ def create_report():
     r_sc1_title.font.color.rgb = RGBColor(0x1B, 0x36, 0x5D)
     
     r_sc1_body = p_sc1.add_run(
-        "This consolidated Minor Project Technical Report documents the comprehensive architecture, source-code implementation, "
-        "relational database schemas, cryptographic authentication controls, emergency SOS dispatch mechanisms, clinical triage algorithms, "
-        "and security audit of JeevanSetu v2.0. All functional claims, scoring thresholds, role-based access control (RBAC) policies, statutory medical "
-        "verification workflows, and voluntary blood donor privacy safeguards have been directly verified against the production TypeScript "
+        "This consolidated Minor Project Technical Report documents the comprehensive architecture, functional implementation, "
+        "relational database models, role-based access control (RBAC) governance, emergency SOS dispatch mechanisms, clinical triage rules, "
+        "and security audit of JeevanSetu v2.0. All functional workflows, permission boundaries, statutory medical "
+        "verification rules, and voluntary blood donor privacy protections have been directly verified against the production TypeScript "
         "codebase (src/app.ts, src/services/authService.ts, src/services/doctorVerificationService.ts, src/services/emergencyProtocolService.ts, "
         "src/services/bloodDonorService.ts, src/services/adminAnalyticsService.ts, src/services/sosService.ts, src/pages/AdminDashboard.ts, "
         "src/pages/DoctorPortal.ts, src/pages/AdminLogin.ts, src/pages/EmergencyProtocols.ts, src/pages/BloodDonors.ts) and validated via 68 "
@@ -190,16 +190,16 @@ def create_report():
     r_toc.font.color.rgb = RGBColor(0x1E, 0x3A, 0x8A)
     
     toc_items = [
-        ("Chapter 1 — Executive Summary & Project Overview", "Introduction, Problem Statement, Core Project Objectives, and Code-Verified Capabilities."),
+        ("Chapter 1 — Executive Summary & Project Overview", "Introduction, Problem Statement, Core Project Objectives, and Platform Functional Flow Matrix."),
         ("Chapter 2 — System Architecture & Core Codebase Modules", "Decoupled Client-First Architecture, Codebase Responsibility Matrix, Persistent Navigation, and Layout Components."),
-        ("Chapter 3 — Authentication, Role-Based Access Control (RBAC) & Database Schema Engine", "Security Configuration, RBAC Role Matrix, PostgreSQL Schema, and Supabase RLS Migration Engine."),
+        ("Chapter 3 — Authentication, Role-Based Access Control (RBAC) & Database Schema Engine", "Security Configuration, RBAC Permission Matrix, PostgreSQL Relational Entity Architecture, and Migration Engine."),
         ("Chapter 4 — Authority Portal UI & Role-Wise Login Walkthrough", "Dual-Role Architecture, Super Administrator Authentication, Verified Doctor Sign-In, and Session Termination."),
-        ("Chapter 5 — Smart Emergency Response & Real SOS Dispatch Engine", "2-Second Hold-to-Activate Timer, Real-World Cellular SMS URI Dispatch, Locality Resolution, and Incident Audit Trail."),
-        ("Chapter 6 — Clinical AI Symptom Triage & Deterministic Safety Engine", "Dual-Stage Triage Pipeline, Deterministic Red-Flag Safety Overrides, Risk Level Scoring, and Multilingual Speech Integration."),
-        ("Chapter 7 — Medical Authority Credentialing & Doctor Verification Engine", "Statutory Council Registration, Verification Lifecycle, Administrative Document Evaluation, and Status Enforcement."),
-        ("Chapter 8 — Emergency Medical Protocol Authoring & Governance System", "Clinical Authoring Studio, Editorial & Review Lifecycle, Version History Snapshots, and Public Attribution with Universal 112/108 Guidance."),
+        ("Chapter 5 — Smart Emergency Response & Real SOS Dispatch Engine", "2-Second Hold-to-Activate Timer, Emergency Operational State Machine, Cellular SMS URI Dispatch, and Incident Audit Trail."),
+        ("Chapter 6 — Clinical AI Symptom Triage & Deterministic Safety Engine", "Dual-Stage Triage Decision Matrix, Deterministic Red-Flag Safety Overrides, and Multilingual Speech Integration."),
+        ("Chapter 7 — Medical Authority Credentialing & Doctor Verification Engine", "Statutory Council Registration, Step-by-Step Verification Lifecycle, Administrative Document Evaluation, and Status Enforcement."),
+        ("Chapter 8 — Emergency Medical Protocol Authoring & Governance System", "Clinical Authoring Studio Component Breakdown, Editorial Review Lifecycle, and Public Attribution with Universal 112/108 Guidance."),
         ("Chapter 9 — Voluntary Blood Donor Registry & Privacy Protection Engine", "Privacy-Preserving Architecture, Administrative Registry Controls, User-Facing Voluntary Registration, and Duplicate Prevention."),
-        ("Chapter 10 — Security Audit Findings, Future Enhancements & Conclusion", "Code-Level Security Audit, Prioritized P0–P3 Engineering Roadmap, Automated QA Test Results, and Project Conclusion.")
+        ("Chapter 10 — Security Audit Findings, Future Enhancements & Conclusion", "Code-Level Security Audit, Prioritized P0–P3 Engineering Roadmap, Automated QA Test Results Table, and Project Conclusion.")
     ]
     
     for ch, desc in toc_items:
@@ -216,64 +216,28 @@ def create_report():
     doc.add_page_break()
     
     # Read Markdown lines and process chapters
-    with open(r'C:\Users\krish\.gemini\antigravity\brain\b48e624f-a3a4-421d-b252-3f8a9bc45581\JeevanSetu_Technical_Report.md', 'r', encoding='utf-8') as f:
+    with open(r'd:\jeevansetu\docs\JeevanSetu_Technical_Report.md', 'r', encoding='utf-8') as f:
         md_content = f.read()
         
     # Split by Chapter 1
     ch1_idx = md_content.find("## Chapter 1 — Executive Summary & Project Overview")
     body_md = md_content[ch1_idx:]
     
-    # Process line by line
     lines = body_md.split('\n')
     i = 0
-    in_code_block = False
-    code_lines = []
     
     while i < len(lines):
         line = lines[i]
         
-        # Code block
-        if line.startswith('```'):
-            if not in_code_block:
-                in_code_block = True
-                code_lines = []
-            else:
-                in_code_block = False
-                # Render code box
-                t_code = doc.add_table(rows=1, cols=1)
-                t_code.alignment = WD_TABLE_ALIGNMENT.CENTER
-                c_code = t_code.cell(0, 0)
-                c_code.width = Inches(6.5)
-                set_cell_background(c_code, "F8FAFC")
-                set_cell_margins(c_code, top=100, bottom=100, left=140, right=140)
-                set_table_borders(t_code, color="CBD5E1", sz="4")
-                p_c = c_code.paragraphs[0]
-                p_c.paragraph_format.line_spacing = 1.0
-                r_c = p_c.add_run('\n'.join(code_lines))
-                r_c.font.name = "Consolas"
-                r_c.font.size = Pt(9)
-                r_c.font.color.rgb = RGBColor(0x0F, 0x17, 0x2A)
-                doc.add_paragraph()
-            i += 1
-            continue
-            
-        if in_code_block:
-            code_lines.append(line)
-            i += 1
-            continue
-            
         # Table
         if line.startswith('|') and '|' in line[1:]:
-            # Read whole markdown table
             table_lines = []
             while i < len(lines) and lines[i].startswith('|'):
                 table_lines.append(lines[i])
                 i += 1
                 
-            # Parse table
             raw_rows = []
             for tl in table_lines:
-                # Skip separator lines like | :--- | :--- |
                 if re.match(r'^\|(\s*:?-+:?\s*\|)+$', tl.strip()):
                     continue
                 cells = [c.strip() for c in tl.split('|')[1:-1]]
@@ -295,18 +259,16 @@ def create_report():
                             continue
                         cell = table.cell(r_idx, c_idx)
                         cell.width = col_width
-                        set_cell_margins(cell, top=80, bottom=80, left=120, right=120)
+                        set_cell_margins(cell, top=80, bottom=80, left=100, right=100)
                         
                         if is_header:
                             set_cell_background(cell, "1B365D")
                         elif r_idx % 2 == 1:
                             set_cell_background(cell, "F8FAFC")
                             
-                        # Clean cell text (remove markdown bold/code)
                         p_cell = cell.paragraphs[0]
                         p_cell.paragraph_format.space_after = Pt(2)
                         
-                        # Parse simple bold markdown in cells
                         parts = re.split(r'(\*\*.*?\*\*|`.*?`)', cell_text)
                         for part in parts:
                             if not part:
@@ -316,7 +278,8 @@ def create_report():
                                 r.font.bold = True
                             elif part.startswith('`') and part.endswith('`'):
                                 r = p_cell.add_run(part[1:-1])
-                                r.font.name = "Consolas"
+                                r.font.name = "Times New Roman"
+                                r.font.bold = True
                                 r.font.size = Pt(9.5)
                             else:
                                 r = p_cell.add_run(part)
@@ -384,7 +347,8 @@ def create_report():
                     r.font.bold = True
                 elif part.startswith('`') and part.endswith('`'):
                     r = p.add_run(part[1:-1])
-                    r.font.name = "Consolas"
+                    r.font.name = "Times New Roman"
+                    r.font.bold = True
                     r.font.size = Pt(10)
                 else:
                     r = p.add_run(part)
@@ -406,7 +370,8 @@ def create_report():
                     r.font.bold = True
                 elif part.startswith('`') and part.endswith('`'):
                     r = p.add_run(part[1:-1])
-                    r.font.name = "Consolas"
+                    r.font.name = "Times New Roman"
+                    r.font.bold = True
                     r.font.size = Pt(10)
                 else:
                     r = p.add_run(part)
@@ -445,7 +410,8 @@ def create_report():
                     r.font.bold = True
                 elif part.startswith('`') and part.endswith('`'):
                     r = p_bq.add_run(part[1:-1])
-                    r.font.name = "Consolas"
+                    r.font.name = "Times New Roman"
+                    r.font.bold = True
                     r.font.size = Pt(9.5)
                 else:
                     r = p_bq.add_run(part)
@@ -468,7 +434,8 @@ def create_report():
                     r.font.bold = True
                 elif part.startswith('`') and part.endswith('`'):
                     r = p.add_run(part[1:-1])
-                    r.font.name = "Consolas"
+                    r.font.name = "Times New Roman"
+                    r.font.bold = True
                     r.font.size = Pt(10)
                 else:
                     r = p.add_run(part)
@@ -477,12 +444,17 @@ def create_report():
         
     # Save outputs
     out_paths = [
+        r'd:\jeevansetu\docs\JeevanSetu_Full_Minor_Project_Report_Updated.docx',
         r'd:\jeevansetu\docs\JeevanSetu_Full_Minor_Project_Report.docx',
-        r'C:\Users\krish\.gemini\antigravity\brain\b48e624f-a3a4-421d-b252-3f8a9bc45581\JeevanSetu_Full_Minor_Project_Report.docx'
+        r'C:\Users\krish\.gemini\antigravity\brain\b48e624f-a3a4-421d-b252-3f8a9bc45581\JeevanSetu_Full_Minor_Project_Report.docx',
+        r'C:\Users\krish\.gemini\antigravity\brain\b48e624f-a3a4-421d-b252-3f8a9bc45581\JeevanSetu_Full_Minor_Project_Report_Updated.docx'
     ]
     for p in out_paths:
-        doc.save(p)
-        print(f"Report DOCX saved successfully to {p} (Size: {os.path.getsize(p)} bytes)")
+        try:
+            doc.save(p)
+            print(f"Report DOCX saved successfully to {p} (Size: {os.path.getsize(p)} bytes)")
+        except PermissionError:
+            print(f"Notice: {p} is currently open in Microsoft Word. Saved updated version to alternative path.")
 
 if __name__ == '__main__':
     create_report()
